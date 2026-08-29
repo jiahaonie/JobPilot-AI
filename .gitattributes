@@ -1,0 +1,61 @@
+# 默认自动识别文本文件，并在仓库中规范化换行符
+* text=auto
+
+# Git 配置文件
+.gitattributes text eol=lf
+.gitignore text eol=lf
+
+# Python 与项目配置
+*.py text eol=lf
+*.pyi text eol=lf
+*.toml text eol=lf
+*.ini text eol=lf
+*.cfg text eol=lf
+*.env.example text eol=lf
+*.lock text eol=lf
+
+# 文档与数据文件
+*.md text eol=lf
+*.txt text eol=lf
+*.json text eol=lf
+*.yml text eol=lf
+*.yaml text eol=lf
+*.xml text eol=lf
+*.csv text eol=lf
+
+# 前端源码
+*.js text eol=lf
+*.jsx text eol=lf
+*.ts text eol=lf
+*.tsx text eol=lf
+*.css text eol=lf
+*.scss text eol=lf
+*.html text eol=lf
+*.svg text eol=lf
+
+# 脚本文件
+*.sh text eol=lf
+*.ps1 text eol=lf
+
+# 图片与媒体文件
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
+*.webp binary
+*.ico binary
+*.pdf binary
+
+# 字体与压缩文件
+*.woff binary
+*.woff2 binary
+*.ttf binary
+*.eot binary
+*.zip binary
+*.gz binary
+*.tar binary
+
+# 本地数据库文件
+*.db binary
+*.sqlite binary
+*.sqlite3 binary

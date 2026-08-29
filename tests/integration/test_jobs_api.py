@@ -1,0 +1,33 @@
+"""HTTP tests for the example job vertical slice."""
+
+
+def test_job_crud_flow(client) -> None:
+    create_response = client.post(
+        "/api/v1/jobs",
+        json={
+            "company_name": "Example Co",
+            "job_title": "RAG Intern",
+            "city": "Singapore",
+            "raw_text": "Build a retrieval service.",
+        },
+    )
+
+    assert create_response.status_code == 201
+    created = create_response.json()
+    assert created["status"] == "pending_analysis"
+
+    job_id = created["id"]
+    update_response = client.patch(
+        f"/api/v1/jobs/{job_id}",
+        json={"status": "applied"},
+    )
+    assert update_response.status_code == 200
+    assert update_response.json()["status"] == "applied"
+
+    list_response = client.get("/api/v1/jobs")
+    assert list_response.status_code == 200
+    assert len(list_response.json()) == 1
+
+    delete_response = client.delete(f"/api/v1/jobs/{job_id}")
+    assert delete_response.status_code == 204
+    assert client.get(f"/api/v1/jobs/{job_id}").status_code == 404
