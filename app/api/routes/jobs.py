@@ -7,13 +7,16 @@ from app.api.dependencies import (
     get_job_analysis_service,
     get_job_requirement_service,
     get_job_service,
+    get_match_report_service,
     get_match_service,
 )
 from app.schemas.job import JobCreate, JobRead, JobUpdate
+from app.schemas.match_report import MatchReportRead
 from app.schemas.matching import MatchReport
 from app.schemas.requirements import JobRequirement
 from app.services.analysis import JobAnalysisService
 from app.services.job import JobService
+from app.services.match_report import MatchReportService
 from app.services.matching import MatchService
 from app.services.requirements import JobRequirementService
 
@@ -107,3 +110,18 @@ def match_job_with_resume(
     """Compare a saved resume against this job's structured requirements."""
 
     return service.match(job_id=job_id, resume_id=payload.resume_id)
+
+
+@router.post(
+    "/{job_id}/match-reports",
+    response_model=MatchReportRead,
+    status_code=status.HTTP_201_CREATED,
+)
+def create_match_report(
+    job_id: int,
+    payload: MatchRequest,
+    service: MatchReportService = Depends(get_match_report_service),
+) -> MatchReportRead:
+    """Calculate and persist an immutable resume-to-job match report."""
+
+    return service.create(job_id=job_id, resume_id=payload.resume_id)

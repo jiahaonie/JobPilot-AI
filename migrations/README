@@ -1,0 +1,6 @@
+JobPilot AI database migrations.
+
+The database URL is loaded from app.core.config.Settings. Apply all migrations
+before starting the API:
+
+    uv run --cache-dir .uv-cache alembic upgrade head

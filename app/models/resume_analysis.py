@@ -26,7 +26,7 @@ class ResumeAnalysis(Base):
     __tablename__ = "resume_analyses"
 
     resume_id: Mapped[int] = mapped_column(
-        ForeignKey("resumes.id"),
+        ForeignKey("resumes.id", ondelete="CASCADE"),
         primary_key=True,
     )
     status: Mapped[ResumeAnalysisStatus] = mapped_column(

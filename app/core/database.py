@@ -1,10 +1,11 @@
 """Database engine and session lifecycle."""
 
+import sqlite3
 from collections.abc import Generator, Iterator
 from contextlib import contextmanager
 
 from fastapi import Request
-from sqlalchemy import Engine, create_engine
+from sqlalchemy import Engine, create_engine, event
 from sqlalchemy.orm import Session, sessionmaker
 
 from app.core.config import Settings
@@ -18,6 +19,19 @@ def _engine_options(database_url: str) -> dict[str, object]:
     return {"pool_pre_ping": True}
 
 
+def _enable_sqlite_foreign_keys(
+    dbapi_connection: sqlite3.Connection,
+    _connection_record: object,
+) -> None:
+    """Enable foreign-key enforcement for every new SQLite connection."""
+
+    cursor = dbapi_connection.cursor()
+    try:
+        cursor.execute("PRAGMA foreign_keys=ON")
+    finally:
+        cursor.close()
+
+
 class Database:
     """Small composition object that makes the persistence boundary testable."""
 
@@ -26,6 +40,8 @@ class Database:
             settings.database_url,
             **_engine_options(settings.database_url),
         )
+        if settings.database_url.startswith("sqlite"):
+            event.listen(self.engine, "connect", _enable_sqlite_foreign_keys)
         self.session_factory = sessionmaker(
             bind=self.engine,
             autoflush=False,
@@ -53,12 +69,13 @@ class Database:
             yield session
 
     def create_all(self) -> None:
-        """Create development tables; migrations will own this later."""
+        """Create tables only for explicitly isolated test databases."""
 
         from app.models import (  # noqa: F401
             Job,  # noqa: F401
             JobRequirementRow,
             KnowledgeDocument,
+            MatchReportRow,
             Resume,
             ResumeAnalysis,
         )

@@ -23,7 +23,7 @@ def create_app(
 
     @asynccontextmanager
     async def lifespan(_application: FastAPI) -> AsyncIterator[None]:
-        if effective_settings.auto_create_tables:
+        if effective_settings.environment == "test" and effective_settings.auto_create_tables:
             effective_database.create_all()
         yield
         effective_database.dispose()

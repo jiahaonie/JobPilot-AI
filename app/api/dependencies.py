@@ -1,4 +1,5 @@
 """FastAPI dependency wiring."""
+
 from functools import lru_cache
 
 from fastapi import Depends
@@ -21,6 +22,7 @@ from app.services.knowledge import (
     KnowledgeDocumentManagementService,
     KnowledgeDocumentService,
 )
+from app.services.match_report import MatchReportService
 from app.services.matching import MatchService
 from app.services.qa import GroundedQuestionAnsweringService
 from app.services.requirements import JobRequirementService
@@ -84,6 +86,14 @@ def get_match_service(db: Session = Depends(get_db)) -> MatchService:
     """Build the match service for one request."""
 
     return MatchService(db)
+
+
+def get_match_report_service(
+    db: Session = Depends(get_db),
+) -> MatchReportService:
+    """Build persisted match-report use cases for one request."""
+
+    return MatchReportService(db)
 
 
 def get_job_analysis_service(
@@ -193,7 +203,5 @@ def get_agent_workflow_service(
 ) -> AgentWorkflowService:
     """Bind the model selector to three real application handlers."""
 
-    registry = ToolRegistry(
-        build_real_tool_specs(session=db, search_service=search_service)
-    )
+    registry = ToolRegistry(build_real_tool_specs(session=db, search_service=search_service))
     return AgentWorkflowService(client=client, registry=registry)

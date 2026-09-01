@@ -14,7 +14,7 @@ class Settings(BaseSettings):
     debug: bool = False
     api_prefix: str = "/api/v1"
     database_url: str = "sqlite:///./jobpilot.db"
-    auto_create_tables: bool = True
+    auto_create_tables: bool = False
 
     llm_provider: str = "deepseek"
     llm_api_key: str | None = None

@@ -21,7 +21,7 @@ class JobRequirementRow(Base):
 
     id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
     job_id: Mapped[int] = mapped_column(
-        ForeignKey("jobs.id"),
+        ForeignKey("jobs.id", ondelete="CASCADE"),
         nullable=False,
         unique=True,
     )

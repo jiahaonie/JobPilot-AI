@@ -16,6 +16,10 @@ JobPilot AI 是一个面向岗位分析与学习知识库 Agent 的分层 FastAP
 
     uv sync --cache-dir .uv-cache --extra dev
 
+首次运行或拉取到新迁移后，由 Alembic 创建或升级数据库：
+
+    uv run --cache-dir .uv-cache --extra dev alembic upgrade head
+
 运行测试：
 
     uv run --cache-dir .uv-cache pytest
@@ -29,14 +33,15 @@ JobPilot AI 是一个面向岗位分析与学习知识库 Agent 的分层 FastAP
 - API 地址：<http://127.0.0.1:8000>
 - OpenAPI 接口文档：<http://127.0.0.1:8000/docs>
 
-开发环境默认使用项目根目录下的 SQLite 数据库文件 jobpilot.db。
+开发环境默认使用项目根目录下的 SQLite 数据库文件 `jobpilot.db`。
+应用启动时不会自动建表，非测试数据库结构统一由 Alembic 管理。
 
 ## 已实现功能
 
 - 岗位 CRUD（创建、查询、修改、删除）
 - LLM 结构化 JD 解析：将原始岗位描述提取为技能、学历、职责和原文证据（DeepSeek，需配置 API Key）
 - 简历管理：保存文本或上传 TXT/Markdown/电子 PDF，再独立触发 LLM 技能提取
-- 简历与岗位匹配：对比简历技能与岗位要求，输出已满足 / 缺失技能及原文证据
+- 简历与岗位匹配：输出技能覆盖分、已满足 / 缺失技能及原文证据，并可保存历史快照
 - 本地知识库：TXT/Markdown 入库、Chroma 语义 Top-K 检索和余弦距离过滤
 - Retrieval Evaluation：离线计算 Recall@K 与 MRR
 - 带引用问答：无检索证据时拒答，并校验 `cited_chunk_ids`
@@ -51,6 +56,9 @@ JobPilot AI 是一个面向岗位分析与学习知识库 Agent 的分层 FastAP
     POST /api/v1/resumes/upload   # 上传 TXT/MD/电子 PDF（不调用 LLM）
     POST /api/v1/resumes/{id}/analyze # 单独触发或重试技能提取
     POST /api/v1/jobs/{id}/match  # 简历与岗位匹配
+    POST /api/v1/jobs/{id}/match-reports # 匹配并保存历史报告
+    GET  /api/v1/match-reports/{id}      # 读取历史报告
+    GET  /api/v1/match-reports           # 筛选历史报告
     POST /api/v1/knowledge/documents  # 上传知识文档
     POST /api/v1/knowledge/search     # 语义检索
     POST /api/v1/ask                  # 带引用问答
