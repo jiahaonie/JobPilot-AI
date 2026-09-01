@@ -12,7 +12,6 @@ class JobRequirement(BaseModel):
     education: str | None = None
     internship_duration: str | None = None
     responsibilities: list[str] = Field(default_factory=list)
-    remote_allowed: bool | None = None
     evidence: list[str] = Field(
         default_factory=list,
         description="Original text snippets supporting each extracted requirement.",

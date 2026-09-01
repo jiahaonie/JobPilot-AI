@@ -89,6 +89,10 @@ def test_resume_creation_and_match_flow(application, client) -> None:
     assert [gap["skill"] for gap in body["missing_skills"]] == ["Vector DB"]
     assert body["bonus_skills"] == []
     assert [gap["skill"] for gap in body["priority_skills"]] == ["Vector DB"]
+    assert body["required_score"] == 53.3
+    assert body["preferred_score"] == 0.0
+    assert body["skill_coverage_score"] == 53.3
+    assert "不能直接解释为值得投递或录用概率" in body["score_disclaimer"]
 
 
 def test_match_returns_404_when_job_not_analyzed(application, client) -> None:
