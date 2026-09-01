@@ -62,6 +62,7 @@ def _create_resume(client: TestClient) -> int:
         json={"title": "我的简历", "raw_text": "熟悉 Python 和 FastAPI。"},
     )
     assert response.status_code == 201
+    assert response.json()["analysis_status"] == "pending"
     return response.json()["id"]
 
 
@@ -70,9 +71,12 @@ def test_resume_creation_and_match_flow(application, client) -> None:
     _override_analysis(application, FakeAnalysisLLM())
 
     job_id = _create_job(client)
-    analyze_response = client.get(f"/api/v1/jobs/{job_id}/requirements")
+    analyze_response = client.post(f"/api/v1/jobs/{job_id}/analyze")
     assert analyze_response.status_code == 200
     resume_id = _create_resume(client)
+    resume_analysis_response = client.post(f"/api/v1/resumes/{resume_id}/analyze")
+    assert resume_analysis_response.status_code == 200
+    assert resume_analysis_response.json()["analysis_status"] == "ready"
 
     match_response = client.post(
         f"/api/v1/jobs/{job_id}/match",
@@ -98,3 +102,28 @@ def test_match_returns_404_when_job_not_analyzed(application, client) -> None:
     )
 
     assert response.status_code == 404
+
+
+def test_resume_creation_succeeds_without_llm_configuration(client) -> None:
+    response = client.post(
+        "/api/v1/resumes",
+        json={"title": "离线保存", "raw_text": "熟悉 Python。"},
+    )
+
+    assert response.status_code == 201
+    assert response.json()["skills"] == []
+    assert response.json()["analysis_status"] == "pending"
+
+
+def test_pending_resume_cannot_be_matched(application, client) -> None:
+    _override_analysis(application, FakeAnalysisLLM())
+    job_id = _create_job(client)
+    assert client.post(f"/api/v1/jobs/{job_id}/analyze").status_code == 200
+    resume_id = _create_resume(client)
+
+    response = client.post(
+        f"/api/v1/jobs/{job_id}/match",
+        json={"resume_id": resume_id},
+    )
+
+    assert response.status_code == 409

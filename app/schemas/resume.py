@@ -4,6 +4,8 @@ from datetime import datetime
 
 from pydantic import BaseModel, ConfigDict, Field
 
+from app.models.enums import ResumeAnalysisStatus
+
 
 class ResumeSkill(BaseModel):
     """LLM-validated skill list extracted from a resume."""
@@ -27,4 +29,7 @@ class ResumeRead(BaseModel):
     title: str
     raw_text: str
     skills: list[str]
+    analysis_status: ResumeAnalysisStatus
+    analysis_error: str | None
+    analyzed_at: datetime | None
     created_at: datetime

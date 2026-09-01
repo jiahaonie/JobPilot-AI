@@ -1,4 +1,6 @@
-"""Resume use cases: save a resume and extract its skills via an LLM."""
+"""Resume persistence and independently triggered skill analysis."""
+
+from datetime import UTC, datetime
 
 from sqlalchemy.orm import Session
 
@@ -6,31 +8,31 @@ from app.core.exceptions import LLMAnalysisError, ResourceNotFoundError
 from app.llm.client import StructuredLLMClient
 from app.llm.exceptions import LLMError
 from app.llm.prompts import build_resume_skill_prompt
+from app.models.enums import ResumeAnalysisStatus
 from app.models.resume import Resume
+from app.models.resume_analysis import ResumeAnalysis
 from app.repositories.resume import ResumeRepository
 from app.schemas.resume import ResumeCreate, ResumeSkill
 
 
 class ResumeService:
-    """Coordinate resume persistence and keep provider concerns out of routes."""
+    """Persist and manage resumes without requiring an LLM provider."""
 
     def __init__(
         self,
         session: Session,
-        client: StructuredLLMClient,
     ) -> None:
         self.session = session
-        self.client = client
         self.repository = ResumeRepository(session)
 
     def create(self, payload: ResumeCreate) -> Resume:
-        """Extract skills from the resume text, then persist the resume."""
+        """Persist source text first and leave skill analysis pending."""
 
-        skills = self._extract_skills(payload.raw_text)
         resume = Resume(
             title=payload.title or _default_title(payload.raw_text),
             raw_text=payload.raw_text,
-            skills=skills,
+            skills=[],
+            analysis=ResumeAnalysis(status=ResumeAnalysisStatus.PENDING),
         )
         self.repository.add(resume)
         self.session.commit()
@@ -57,19 +59,56 @@ class ResumeService:
         self.repository.delete(resume)
         self.session.commit()
 
+
+class ResumeAnalysisService:
+    """Run and persist retryable LLM analysis for an already saved resume."""
+
+    def __init__(
+        self,
+        session: Session,
+        client: StructuredLLMClient,
+    ) -> None:
+        self.session = session
+        self.client = client
+        self.resume_service = ResumeService(session)
+
+    def analyze(self, resume_id: int) -> Resume:
+        """Extract skills and record ready or failed lifecycle state."""
+
+        resume = self.resume_service.get(resume_id)
+        analysis = resume.analysis
+        if analysis is None:
+            analysis = ResumeAnalysis(resume_id=resume.id)
+            resume.analysis = analysis
+
+        analysis.status = ResumeAnalysisStatus.ANALYZING
+        analysis.error_message = None
+        self.session.commit()
+
+        try:
+            skills = self._extract_skills(resume.raw_text)
+        except LLMError as exc:
+            analysis.status = ResumeAnalysisStatus.FAILED
+            analysis.error_message = str(exc)
+            self.session.commit()
+            raise LLMAnalysisError(f"Skill extraction failed: {exc}") from exc
+
+        resume.skills = skills
+        analysis.status = ResumeAnalysisStatus.READY
+        analysis.error_message = None
+        analysis.analyzed_at = datetime.now(UTC)
+        self.session.commit()
+        self.session.refresh(resume)
+        return resume
+
     def _extract_skills(self, raw_text: str) -> list[str]:
-        """Ask the LLM to extract skills, failing the request on provider errors."""
+        """Ask the LLM for a schema-validated skill list."""
 
         prompt = build_resume_skill_prompt(raw_text)
-        try:
-            result = self.client.complete_structured(
-                prompt=prompt,
-                response_model=ResumeSkill,
-            )
-        except LLMError as exc:
-            raise LLMAnalysisError(
-                f"Skill extraction failed: {exc}"
-            ) from exc
+        result = self.client.complete_structured(
+            prompt=prompt,
+            response_model=ResumeSkill,
+        )
         return result.skills
 
 

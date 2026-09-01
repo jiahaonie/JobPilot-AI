@@ -14,8 +14,10 @@ class FakeLLMClient:
 
     def __init__(self, *, fail: bool = False) -> None:
         self.fail = fail
+        self.calls = 0
 
     def complete_structured(self, *, prompt, response_model):
+        self.calls += 1
         if self.fail:
             raise StructuredOutputError("fake provider returned invalid output")
         return response_model.model_validate(
@@ -57,37 +59,41 @@ def create_job(client: TestClient) -> int:
     return response.json()["id"]
 
 
-def test_job_requirements_endpoint_returns_structured_output(
+def test_analyze_then_get_requirements_without_reanalyzing(
     application,
     client,
 ) -> None:
-    override_analysis_dependency(application, FakeLLMClient())
+    fake_client = FakeLLMClient()
+    override_analysis_dependency(application, fake_client)
     job_id = create_job(client)
 
+    analyze_response = client.post(f"/api/v1/jobs/{job_id}/analyze")
     response = client.get(f"/api/v1/jobs/{job_id}/requirements")
 
+    assert analyze_response.status_code == 200
     assert response.status_code == 200
     body = response.json()
     assert body["job_title"] == "RAG Intern"
     assert body["required_skills"] == ["Python"]
     assert body["evidence"] == ["Build a retrieval service"]
+    assert fake_client.calls == 1
 
 
-def test_job_requirements_returns_503_when_analysis_fails(
+def test_job_analyze_returns_503_when_analysis_fails(
     application,
     client,
 ) -> None:
     override_analysis_dependency(application, FakeLLMClient(fail=True))
     job_id = create_job(client)
 
-    response = client.get(f"/api/v1/jobs/{job_id}/requirements")
+    response = client.post(f"/api/v1/jobs/{job_id}/analyze")
 
     assert response.status_code == 503
 
 
-def test_job_requirements_returns_404_for_missing_job(application, client) -> None:
-    override_analysis_dependency(application, FakeLLMClient())
+def test_job_requirements_returns_404_before_analysis(client) -> None:
+    job_id = create_job(client)
 
-    response = client.get("/api/v1/jobs/999999/requirements")
+    response = client.get(f"/api/v1/jobs/{job_id}/requirements")
 
     assert response.status_code == 404

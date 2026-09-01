@@ -2,7 +2,12 @@
 
 from sqlalchemy.orm import Session
 
-from app.core.exceptions import JobRequirementNotFoundError, ResourceNotFoundError
+from app.core.exceptions import (
+    JobRequirementNotFoundError,
+    ResourceNotFoundError,
+    ResumeAnalysisNotReadyError,
+)
+from app.models.enums import ResumeAnalysisStatus
 from app.repositories.job_requirement import JobRequirementRepository
 from app.repositories.resume import ResumeRepository
 from app.schemas.matching import MatchReport, SkillGap
@@ -35,6 +40,10 @@ class MatchService:
         resume = self.resume_repository.get(resume_id)
         if resume is None:
             raise ResourceNotFoundError(f"Resume {resume_id} was not found")
+        if resume.analysis_status != ResumeAnalysisStatus.READY:
+            raise ResumeAnalysisNotReadyError(
+                f"Resume {resume_id} analysis is {resume.analysis_status}"
+            )
 
         resume_normalized = {_normalize(skill) for skill in resume.skills}
         evidence_by_skill = self._evidence_lookup(requirement.evidence)

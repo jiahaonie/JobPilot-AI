@@ -60,6 +60,7 @@ class Database:
             JobRequirementRow,
             KnowledgeDocument,
             Resume,
+            ResumeAnalysis,
         )
         from app.models.base import Base
 

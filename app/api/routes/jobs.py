@@ -5,6 +5,7 @@ from pydantic import BaseModel
 
 from app.api.dependencies import (
     get_job_analysis_service,
+    get_job_requirement_service,
     get_job_service,
     get_match_service,
 )
@@ -14,6 +15,7 @@ from app.schemas.requirements import JobRequirement
 from app.services.analysis import JobAnalysisService
 from app.services.job import JobService
 from app.services.matching import MatchService
+from app.services.requirements import JobRequirementService
 
 router = APIRouter(prefix="/jobs", tags=["jobs"])
 
@@ -76,14 +78,24 @@ def delete_job(
     service.delete(job_id)
 
 
-@router.get("/{job_id}/requirements", response_model=JobRequirement)
-def get_job_requirements(
+@router.post("/{job_id}/analyze", response_model=JobRequirement)
+def analyze_job(
     job_id: int,
     service: JobAnalysisService = Depends(get_job_analysis_service),
 ) -> JobRequirement:
-    """Analyze a saved job and return its structured requirements."""
+    """Explicitly analyze a saved JD and overwrite its latest requirements."""
 
     return service.analyze_job(job_id)
+
+
+@router.get("/{job_id}/requirements", response_model=JobRequirement)
+def get_job_requirements(
+    job_id: int,
+    service: JobRequirementService = Depends(get_job_requirement_service),
+) -> JobRequirement:
+    """Read stored requirements without invoking an LLM or writing data."""
+
+    return service.get(job_id)
 
 
 @router.post("/{job_id}/match", response_model=MatchReport)

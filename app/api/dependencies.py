@@ -23,7 +23,9 @@ from app.services.knowledge import (
 )
 from app.services.matching import MatchService
 from app.services.qa import GroundedQuestionAnsweringService
-from app.services.resume import ResumeService
+from app.services.requirements import JobRequirementService
+from app.services.resume import ResumeAnalysisService, ResumeService
+from app.services.resume_file import ResumeFileService
 from app.services.search import KnowledgeSearchService
 
 
@@ -51,11 +53,31 @@ def get_llm_client(
 
 def get_resume_service(
     db: Session = Depends(get_db),
-    client: StructuredLLMClient = Depends(get_llm_client),
 ) -> ResumeService:
-    """Build the résumé service for one request."""
+    """Build resume storage without requiring an LLM provider."""
 
-    return ResumeService(db, client)
+    return ResumeService(db)
+
+
+def get_resume_analysis_service(
+    db: Session = Depends(get_db),
+    client: StructuredLLMClient = Depends(get_llm_client),
+) -> ResumeAnalysisService:
+    """Build independently triggered resume skill analysis."""
+
+    return ResumeAnalysisService(db, client)
+
+
+def get_resume_file_service(
+    settings: Settings = Depends(get_settings),
+) -> ResumeFileService:
+    """Build bounded TXT, Markdown, and electronic PDF extraction."""
+
+    return ResumeFileService(
+        max_upload_bytes=settings.resume_max_upload_bytes,
+        max_pdf_pages=settings.resume_max_pdf_pages,
+        max_text_chars=settings.resume_max_text_chars,
+    )
 
 
 def get_match_service(db: Session = Depends(get_db)) -> MatchService:
@@ -71,6 +93,14 @@ def get_job_analysis_service(
     """Build the job analysis service for one request."""
 
     return JobAnalysisService(db, client)
+
+
+def get_job_requirement_service(
+    db: Session = Depends(get_db),
+) -> JobRequirementService:
+    """Build read-only access to previously analyzed job requirements."""
+
+    return JobRequirementService(db)
 
 
 @lru_cache

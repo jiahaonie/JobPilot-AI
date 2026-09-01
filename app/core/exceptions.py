@@ -26,6 +26,30 @@ class LLMAnalysisError(DomainError):
     status_code = 503
 
 
+class ResumeAnalysisNotReadyError(DomainError):
+    """Raised when matching is requested before resume analysis succeeds."""
+
+    status_code = 409
+
+
+class UnsupportedFileTypeError(DomainError):
+    """Raised when an uploaded file format is outside the supported set."""
+
+    status_code = 415
+
+
+class FileTooLargeError(DomainError):
+    """Raised when an upload exceeds the configured byte limit."""
+
+    status_code = 413
+
+
+class InvalidFileError(DomainError):
+    """Raised when an allowed file cannot produce usable resume text."""
+
+    status_code = 422
+
+
 class JobRequirementNotFoundError(DomainError):
     """Raised when matching against a job that has no stored analysis."""
 

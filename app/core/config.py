@@ -32,6 +32,10 @@ class Settings(BaseSettings):
     rag_max_distance: float = 0.45
     rag_answer_top_k: int = 5
 
+    resume_max_upload_bytes: int = 5 * 1024 * 1024
+    resume_max_pdf_pages: int = 20
+    resume_max_text_chars: int = 100_000
+
     model_config = SettingsConfigDict(
         env_file=".env",
         env_file_encoding="utf-8",

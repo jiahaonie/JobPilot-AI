@@ -21,3 +21,12 @@ class DocumentStatus(StrEnum):
     READY = "ready"
     FAILED = "failed"
     DELETING = "deleting"
+
+
+class ResumeAnalysisStatus(StrEnum):
+    """Lifecycle of LLM skill extraction for one saved resume."""
+
+    PENDING = "pending"
+    ANALYZING = "analyzing"
+    READY = "ready"
+    FAILED = "failed"

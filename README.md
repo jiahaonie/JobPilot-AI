@@ -35,7 +35,7 @@ JobPilot AI 是一个面向岗位分析与学习知识库 Agent 的分层 FastAP
 
 - 岗位 CRUD（创建、查询、修改、删除）
 - LLM 结构化 JD 解析：将原始岗位描述提取为技能、学历、职责和原文证据（DeepSeek，需配置 API Key）
-- 简历管理：录入简历文本，由 LLM 提取技能列表
+- 简历管理：保存文本或上传 TXT/Markdown/电子 PDF，再独立触发 LLM 技能提取
 - 简历与岗位匹配：对比简历技能与岗位要求，输出已满足 / 缺失技能及原文证据
 - 本地知识库：TXT/Markdown 入库、Chroma 语义 Top-K 检索和余弦距离过滤
 - Retrieval Evaluation：离线计算 Recall@K 与 MRR
@@ -45,8 +45,11 @@ JobPilot AI 是一个面向岗位分析与学习知识库 Agent 的分层 FastAP
 启动服务后，通过 Swagger 界面（`/docs`）或以下接口使用：
 
     POST /api/v1/jobs             # 创建岗位
-    GET  /api/v1/jobs/{id}/requirements   # 分析岗位（LLM 结构化解析）
-    POST /api/v1/resumes          # 录入简历（LLM 提取技能）
+    POST /api/v1/jobs/{id}/analyze        # 分析岗位并保存最新结果
+    GET  /api/v1/jobs/{id}/requirements   # 只读取已有岗位分析结果
+    POST /api/v1/resumes          # 保存简历文本（不调用 LLM）
+    POST /api/v1/resumes/upload   # 上传 TXT/MD/电子 PDF（不调用 LLM）
+    POST /api/v1/resumes/{id}/analyze # 单独触发或重试技能提取
     POST /api/v1/jobs/{id}/match  # 简历与岗位匹配
     POST /api/v1/knowledge/documents  # 上传知识文档
     POST /api/v1/knowledge/search     # 语义检索
