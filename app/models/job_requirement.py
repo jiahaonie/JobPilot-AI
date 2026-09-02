@@ -1,4 +1,4 @@
-"""Persisted structured job requirements."""
+"""持久化的结构化岗位要求。"""
 
 from datetime import UTC, datetime
 
@@ -9,13 +9,12 @@ from app.models.base import Base
 
 
 def utc_now() -> datetime:
-    """Return a timezone-aware timestamp for application records."""
-
+    """返回供应用记录使用的带时区时间戳。"""
     return datetime.now(UTC)
 
 
 class JobRequirementRow(Base):
-    """The latest structured analysis of one job description."""
+    """单个岗位描述的最新结构化分析。"""
 
     __tablename__ = "job_requirements"
 

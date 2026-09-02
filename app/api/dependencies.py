@@ -1,4 +1,4 @@
-"""FastAPI dependency wiring."""
+"""应用的 FastAPI 依赖装配。"""
 
 from functools import lru_cache
 
@@ -32,16 +32,14 @@ from app.services.search import KnowledgeSearchService
 
 
 def get_job_service(db: Session = Depends(get_db)) -> JobService:
-    """Build the job service for one request."""
-
+    """为单次请求构建岗位服务。"""
     return JobService(db)
 
 
 def get_llm_client(
     settings: Settings = Depends(get_settings),
 ) -> StructuredLLMClient:
-    """Build the configured LLM client, or an explicit unavailable placeholder."""
-
+    """构建已配置的 LLM 客户端，未配置时返回明确的不可用占位实现。"""
     if not settings.llm_api_key:
         return UnavailableLLMClient()
     return DeepSeekStructuredClient(
@@ -56,8 +54,7 @@ def get_llm_client(
 def get_resume_service(
     db: Session = Depends(get_db),
 ) -> ResumeService:
-    """Build resume storage without requiring an LLM provider."""
-
+    """构建不依赖 LLM 服务商的简历存储服务。"""
     return ResumeService(db)
 
 
@@ -65,16 +62,14 @@ def get_resume_analysis_service(
     db: Session = Depends(get_db),
     client: StructuredLLMClient = Depends(get_llm_client),
 ) -> ResumeAnalysisService:
-    """Build independently triggered resume skill analysis."""
-
+    """构建可独立触发的简历技能分析服务。"""
     return ResumeAnalysisService(db, client)
 
 
 def get_resume_file_service(
     settings: Settings = Depends(get_settings),
 ) -> ResumeFileService:
-    """Build bounded TXT, Markdown, and electronic PDF extraction."""
-
+    """构建受限的 TXT、Markdown 和电子 PDF 提取服务。"""
     return ResumeFileService(
         max_upload_bytes=settings.resume_max_upload_bytes,
         max_pdf_pages=settings.resume_max_pdf_pages,
@@ -83,16 +78,14 @@ def get_resume_file_service(
 
 
 def get_match_service(db: Session = Depends(get_db)) -> MatchService:
-    """Build the match service for one request."""
-
+    """为单次请求构建匹配服务。"""
     return MatchService(db)
 
 
 def get_match_report_service(
     db: Session = Depends(get_db),
 ) -> MatchReportService:
-    """Build persisted match-report use cases for one request."""
-
+    """为单次请求构建匹配报告持久化服务。"""
     return MatchReportService(db)
 
 
@@ -100,23 +93,20 @@ def get_job_analysis_service(
     db: Session = Depends(get_db),
     client: StructuredLLMClient = Depends(get_llm_client),
 ) -> JobAnalysisService:
-    """Build the job analysis service for one request."""
-
+    """为单次请求构建岗位分析服务。"""
     return JobAnalysisService(db, client)
 
 
 def get_job_requirement_service(
     db: Session = Depends(get_db),
 ) -> JobRequirementService:
-    """Build read-only access to previously analyzed job requirements."""
-
+    """构建对已分析岗位要求的只读访问服务。"""
     return JobRequirementService(db)
 
 
 @lru_cache
 def build_embedder(model_name: str) -> FastEmbedder:
     """复用已经加载的 Embedding 模型"""
-
     return FastEmbedder(model_name=model_name)
 
 
@@ -126,7 +116,6 @@ def build_vector_index(
     collection_name: str,
 ) -> ChromaVectorIndex:
     """复用 Chroma 客户端与集合"""
-
     return ChromaVectorIndex(
         path=path,
         collection_name=collection_name,
@@ -138,7 +127,6 @@ def get_knowledge_document_service(
     settings: Settings = Depends(get_settings),
 ) -> KnowledgeDocumentService:
     """组装文档入库需要的全部组件。"""
-
     return KnowledgeDocumentService(
         session=db,
         parser=PlainTextParser(),
@@ -158,8 +146,7 @@ def get_knowledge_document_management_service(
     db: Session = Depends(get_db),
     settings: Settings = Depends(get_settings),
 ) -> KnowledgeDocumentManagementService:
-    """Build document management without loading the embedding model."""
-
+    """构建无需加载嵌入模型的文档管理服务。"""
     return KnowledgeDocumentManagementService(
         session=db,
         vector_index=build_vector_index(
@@ -172,8 +159,7 @@ def get_knowledge_document_management_service(
 def get_knowledge_search_service(
     settings: Settings = Depends(get_settings),
 ) -> KnowledgeSearchService:
-    """Build semantic retrieval with the same embedding/index pair as ingestion."""
-
+    """使用与入库相同的嵌入和索引组件构建语义检索。"""
     return KnowledgeSearchService(
         embedder=build_embedder(settings.rag_embedding_model),
         vector_index=build_vector_index(
@@ -188,8 +174,7 @@ def get_grounded_qa_service(
     search_service: KnowledgeSearchService = Depends(get_knowledge_search_service),
     client: StructuredLLMClient = Depends(get_llm_client),
 ) -> GroundedQuestionAnsweringService:
-    """Build grounded QA from retrieval plus the configured structured LLM."""
-
+    """结合检索与结构化 LLM 构建有依据的问答服务。"""
     return GroundedQuestionAnsweringService(
         search_service=search_service,
         client=client,
@@ -201,7 +186,6 @@ def get_agent_workflow_service(
     client: StructuredLLMClient = Depends(get_llm_client),
     search_service: KnowledgeSearchService = Depends(get_knowledge_search_service),
 ) -> AgentWorkflowService:
-    """Bind the model selector to three real application handlers."""
-
+    """将模型选择器绑定到三个真实应用处理器。"""
     registry = ToolRegistry(build_real_tool_specs(session=db, search_service=search_service))
     return AgentWorkflowService(client=client, registry=registry)

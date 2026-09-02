@@ -1,4 +1,4 @@
-"""Unit tests for semantic retrieval and irrelevant-result filtering."""
+"""语义检索与无关结果过滤的单元测试。"""
 
 from app.rag.models import DocumentChunk
 from app.rag.vector_store import VectorSearchResult
@@ -44,9 +44,7 @@ def _result(chunk_id: str, distance: float) -> VectorSearchResult:
 
 def test_search_uses_query_embedding_top_k_and_distance_threshold() -> None:
     embedder = RecordingEmbedder()
-    index = RecordingVectorIndex(
-        [_result("relevant", 0.18), _result("irrelevant", 0.81)]
-    )
+    index = RecordingVectorIndex([_result("relevant", 0.18), _result("irrelevant", 0.81)])
     service = KnowledgeSearchService(
         embedder=embedder,
         vector_index=index,

@@ -1,4 +1,4 @@
-"""Validate uploaded resume files and extract normalized text."""
+"""校验上传的简历文件并提取规范化文本。"""
 
 from dataclasses import dataclass
 from io import BytesIO
@@ -19,14 +19,14 @@ _PDF_SUFFIX = ".pdf"
 
 @dataclass(frozen=True, slots=True)
 class ParsedResumeFile:
-    """Safe filename and text extracted from one supported upload."""
+    """从受支持上传文件中提取的安全文件名与文本。"""
 
     source_name: str
     raw_text: str
 
 
 class ResumeFileService:
-    """Convert TXT, Markdown, or electronic PDF bytes into resume text."""
+    """将 TXT、Markdown 或电子 PDF 字节转换为简历文本。"""
 
     def __init__(
         self,
@@ -40,15 +40,12 @@ class ResumeFileService:
         self.max_text_chars = max_text_chars
 
     def parse(self, *, filename: str | None, content: bytes) -> ParsedResumeFile:
-        """Validate one upload and return non-empty normalized text."""
-
+        """校验上传文件，并返回非空的规范化文本。"""
         source_name = Path(filename or "").name.strip()
         if not source_name:
             raise InvalidFileError("uploaded resume must have a filename")
         if len(content) > self.max_upload_bytes:
-            raise FileTooLargeError(
-                f"resume exceeds {self.max_upload_bytes} bytes"
-            )
+            raise FileTooLargeError(f"resume exceeds {self.max_upload_bytes} bytes")
 
         suffix = Path(source_name).suffix.lower()
         if suffix in _TEXT_SUFFIXES:
@@ -71,16 +68,14 @@ class ResumeFileService:
 
     @staticmethod
     def _parse_utf8(content: bytes) -> str:
-        """Decode UTF-8 text while accepting an optional byte-order mark."""
-
+        """解码 UTF-8 文本，并允许可选的字节顺序标记。"""
         try:
             return content.decode("utf-8-sig")
         except UnicodeDecodeError as exc:
             raise InvalidFileError("TXT and Markdown resumes must be valid UTF-8") from exc
 
     def _parse_pdf(self, content: bytes) -> str:
-        """Extract text from an electronic PDF; scanned PDFs are rejected."""
-
+        """从电子 PDF 提取文本；扫描版 PDF 将被拒绝。"""
         if not content.startswith(b"%PDF-"):
             raise InvalidFileError("uploaded file is not a valid PDF")
         try:
@@ -88,9 +83,7 @@ class ResumeFileService:
             if reader.is_encrypted:
                 raise InvalidFileError("encrypted PDF resumes are not supported")
             if len(reader.pages) > self.max_pdf_pages:
-                raise InvalidFileError(
-                    f"PDF resume exceeds {self.max_pdf_pages} pages"
-                )
+                raise InvalidFileError(f"PDF resume exceeds {self.max_pdf_pages} pages")
             text = "\n\n".join(page.extract_text() or "" for page in reader.pages)
         except InvalidFileError:
             raise

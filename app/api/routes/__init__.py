@@ -1,1 +1,1 @@
-"""HTTP route modules."""
+"""应用的 HTTP 路由模块。"""

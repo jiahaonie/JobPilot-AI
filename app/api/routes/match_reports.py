@@ -1,4 +1,4 @@
-"""Read persisted resume-to-job match reports."""
+"""读取已保存的简历岗位匹配报告。"""
 
 from fastapi import APIRouter, Depends, Query
 
@@ -17,8 +17,7 @@ def list_match_reports(
     limit: int = Query(default=100, ge=1, le=100),
     service: MatchReportService = Depends(get_match_report_service),
 ) -> list[MatchReportRead]:
-    """List historical reports with optional job and resume filters."""
-
+    """按可选岗位和简历条件列出历史报告。"""
     return service.list(
         job_id=job_id,
         resume_id=resume_id,
@@ -32,6 +31,5 @@ def get_match_report(
     report_id: int,
     service: MatchReportService = Depends(get_match_report_service),
 ) -> MatchReportRead:
-    """Return one immutable historical matching report."""
-
+    """返回一份不可变的历史匹配报告。"""
     return service.get(report_id)

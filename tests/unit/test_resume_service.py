@@ -1,4 +1,4 @@
-"""Unit tests for decoupled resume storage and LLM analysis."""
+"""解耦简历存储与 LLM 分析的单元测试。"""
 
 import pytest
 from sqlalchemy import create_engine
@@ -14,13 +14,16 @@ from app.services.resume import ResumeAnalysisService, ResumeService
 
 
 class FakeLLMClient:
-    def __init__(self, skills=None, fail: bool = False) -> None:
+    def __init__(self, skills=None, fail: bool = False, unexpected: bool = False) -> None:
         self.skills = skills or []
         self.fail = fail
+        self.unexpected = unexpected
 
     def complete_structured(self, *, prompt, response_model):
         if self.fail:
             raise LLMNotConfiguredError("boom")
+        if self.unexpected:
+            raise RuntimeError("provider bug")
         return response_model.model_validate({"skills": self.skills})
 
 
@@ -36,9 +39,7 @@ def session():
 def test_create_persists_before_analysis(session) -> None:
     service = ResumeService(session)
 
-    resume = service.create(
-        ResumeCreate(title="简历", raw_text="熟悉 Python 和 FastAPI。")
-    )
+    resume = service.create(ResumeCreate(title="简历", raw_text="熟悉 Python 和 FastAPI。"))
 
     assert resume.skills == []
     assert resume.analysis_status == ResumeAnalysisStatus.PENDING
@@ -80,3 +81,15 @@ def test_analysis_failure_keeps_resume_and_records_failure(session) -> None:
     assert persisted is not None
     assert persisted.analysis_status == ResumeAnalysisStatus.FAILED
     assert persisted.analysis_error == "boom"
+
+
+def test_unexpected_analysis_failure_does_not_leave_analyzing_state(session) -> None:
+    resume = ResumeService(session).create(ResumeCreate(title="x", raw_text="y"))
+    service = ResumeAnalysisService(session, FakeLLMClient(unexpected=True))
+
+    with pytest.raises(LLMAnalysisError):
+        service.analyze(resume.id)
+
+    persisted = session.get(Resume, resume.id)
+    assert persisted.analysis_status == ResumeAnalysisStatus.FAILED
+    assert persisted.analysis_error == "Unexpected analysis failure"

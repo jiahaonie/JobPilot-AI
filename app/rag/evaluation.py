@@ -1,4 +1,4 @@
-"""Retrieval metrics used by the offline evaluation suite."""
+"""离线评估套件使用的检索指标。"""
 
 from collections.abc import Iterable, Sequence
 from dataclasses import dataclass
@@ -6,7 +6,7 @@ from dataclasses import dataclass
 
 @dataclass(frozen=True)
 class RetrievalEvaluationCase:
-    """Expected relevant chunk IDs and the ranking returned for one query."""
+    """单次查询的预期相关分块编号与返回排序。"""
 
     query: str
     relevant_chunk_ids: frozenset[str]
@@ -15,7 +15,7 @@ class RetrievalEvaluationCase:
 
 @dataclass(frozen=True)
 class RetrievalEvaluationSummary:
-    """Mean Recall@K and MRR over a fixed evaluation set."""
+    """固定评估集上的平均 Recall@K 与 MRR。"""
 
     case_count: int
     k: int
@@ -29,8 +29,7 @@ def recall_at_k(
     *,
     k: int,
 ) -> float:
-    """Return the fraction of relevant chunks found in the first K results."""
-
+    """返回前 K 个结果中找到的相关分块比例。"""
     _validate_metric_inputs(relevant_chunk_ids, k)
     hits = relevant_chunk_ids.intersection(retrieved_chunk_ids[:k])
     return len(hits) / len(relevant_chunk_ids)
@@ -40,8 +39,7 @@ def reciprocal_rank(
     retrieved_chunk_ids: Sequence[str],
     relevant_chunk_ids: set[str] | frozenset[str],
 ) -> float:
-    """Return 1/rank for the first relevant result, or zero when none is found."""
-
+    """返回首个相关结果排名的倒数；未找到时返回零。"""
     if not relevant_chunk_ids:
         raise ValueError("relevant_chunk_ids cannot be empty")
     for rank, chunk_id in enumerate(retrieved_chunk_ids, start=1):
@@ -55,8 +53,7 @@ def evaluate_retrieval(
     *,
     k: int,
 ) -> RetrievalEvaluationSummary:
-    """Aggregate Recall@K and MRR across reproducible retrieval cases."""
-
+    """汇总可复现检索用例的 Recall@K 与 MRR。"""
     materialized_cases = list(cases)
     if not materialized_cases:
         raise ValueError("at least one evaluation case is required")

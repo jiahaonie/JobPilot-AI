@@ -1,4 +1,4 @@
-"""Replaceable structured LLM client contract."""
+"""可替换的结构化 LLM 客户端契约。"""
 
 from typing import Protocol, TypeVar
 
@@ -10,7 +10,7 @@ ModelT = TypeVar("ModelT", bound=BaseModel)
 
 
 class StructuredLLMClient(Protocol):
-    """Port used by services that need validated model output."""
+    """需要已校验模型输出的服务所使用的端口。"""
 
     def complete_structured(
         self,
@@ -18,11 +18,11 @@ class StructuredLLMClient(Protocol):
         prompt: str,
         response_model: type[ModelT],
     ) -> ModelT:
-        """Complete a prompt and return an instance of response_model."""
+        """完成提示词请求并返回指定响应模型的实例。"""
 
 
 class UnavailableLLMClient:
-    """Explicit placeholder until a provider adapter is selected."""
+    """选择服务商适配器前使用的明确占位实现。"""
 
     def complete_structured(
         self,
@@ -30,8 +30,7 @@ class UnavailableLLMClient:
         prompt: str,
         response_model: type[ModelT],
     ) -> ModelT:
-        """Fail clearly instead of silently returning fabricated data."""
-
+        """明确失败，不静默返回伪造数据。"""
         del prompt, response_model
         raise LLMNotConfiguredError(
             "No LLM provider is configured. Add a provider adapter before analysis."

@@ -1,4 +1,4 @@
-"""Knowledge-document persistence model."""
+"""知识文档持久化模型。"""
 
 from datetime import UTC, datetime
 
@@ -11,13 +11,12 @@ from app.models.enums import DocumentStatus
 
 
 def utc_now() -> datetime:
-    """Return a timezone-aware timestamp for application records."""
-
+    """返回供应用记录使用的带时区时间戳。"""
     return datetime.now(UTC)
 
 
 class KnowledgeDocument(Base):
-    """Source document tracked while its chunks are indexed in Chroma."""
+    """在 Chroma 中索引分块时跟踪的源文档。"""
 
     __tablename__ = "knowledge_documents"
 

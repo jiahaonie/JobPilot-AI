@@ -1,4 +1,4 @@
-"""Semantic knowledge retrieval use case."""
+"""知识库语义检索用例。"""
 
 from app.rag.embedding import Embedder
 from app.rag.vector_store import VectorIndex
@@ -9,7 +9,7 @@ from app.schemas.knowledge import (
 
 
 class KnowledgeSearchService:
-    """Embed one query, retrieve Top-K chunks, then reject distant matches."""
+    """嵌入查询、检索 Top-K 片段，并过滤距离过大的结果。"""
 
     def __init__(
         self,
@@ -29,8 +29,7 @@ class KnowledgeSearchService:
         top_k: int = 5,
         max_distance: float | None = None,
     ) -> KnowledgeSearchResponse:
-        """Return only Chroma matches inside the configured cosine distance."""
-
+        """仅返回余弦距离在配置阈值内的 Chroma 匹配。"""
         normalized_query = query.strip()
         if not normalized_query:
             raise ValueError("query cannot be empty")

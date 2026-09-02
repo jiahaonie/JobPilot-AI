@@ -1,22 +1,21 @@
-"""Resume-to-job matching contracts."""
+"""简历岗位匹配契约。"""
 
 from pydantic import BaseModel, Field
 
 SKILL_COVERAGE_DISCLAIMER = (
-    "该分数仅表示简历对岗位技能要求的覆盖程度，"
-    "不能直接解释为值得投递或录用概率。"
+    "该分数仅表示简历对岗位技能要求的覆盖程度，不能直接解释为值得投递或录用概率。"
 )
 
 
 class SkillGap(BaseModel):
-    """One required skill and the job text that supports it."""
+    """一项必需技能及其岗位原文依据。"""
 
     skill: str
     evidence: str | None = None
 
 
 class MatchReport(BaseModel):
-    """Explained skill comparison between a resume and one job."""
+    """一份简历与一个岗位之间的可解释技能比较。"""
 
     skill_coverage_score: float | None
     required_score: float | None

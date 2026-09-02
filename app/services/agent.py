@@ -1,4 +1,4 @@
-"""Single-step model-selected tool workflow."""
+"""由模型选择工具的单步工作流。"""
 
 import json
 
@@ -8,7 +8,7 @@ from app.schemas.agent import AgentRunResponse, AgentToolDecision
 
 
 class AgentWorkflowService:
-    """Ask the model to select one registered tool, then execute it safely."""
+    """让模型选择一个已注册工具，并安全执行。"""
 
     def __init__(
         self,
@@ -20,8 +20,7 @@ class AgentWorkflowService:
         self.registry = registry
 
     def run(self, message: str) -> AgentRunResponse:
-        """Produce an auditable tool decision and validated handler result."""
-
+        """生成可审计的工具决策和经过校验的处理结果。"""
         decision = self.client.complete_structured(
             prompt=self._build_prompt(message),
             response_model=AgentToolDecision,

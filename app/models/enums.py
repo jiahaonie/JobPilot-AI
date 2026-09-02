@@ -1,10 +1,10 @@
-"""Persistence-level enumerations."""
+"""持久化层枚举。"""
 
 from enum import StrEnum
 
 
 class JobStatus(StrEnum):
-    """Application status values from the project plan."""
+    """项目计划定义的投递状态值。"""
 
     PENDING_ANALYSIS = "pending_analysis"
     PREPARING = "preparing"
@@ -15,7 +15,7 @@ class JobStatus(StrEnum):
 
 
 class DocumentStatus(StrEnum):
-    """Indexing lifecycle across SQLite and the vector store."""
+    """跨 SQLite 与向量存储的索引生命周期。"""
 
     INDEXING = "indexing"
     READY = "ready"
@@ -24,7 +24,7 @@ class DocumentStatus(StrEnum):
 
 
 class ResumeAnalysisStatus(StrEnum):
-    """Lifecycle of LLM skill extraction for one saved resume."""
+    """单份已保存简历的 LLM 技能提取生命周期。"""
 
     PENDING = "pending"
     ANALYZING = "analyzing"

@@ -1,11 +1,11 @@
-"""Domain exceptions and their HTTP translation."""
+"""领域异常及其 HTTP 转换。"""
 
 from fastapi import FastAPI, Request
 from fastapi.responses import JSONResponse
 
 
 class DomainError(Exception):
-    """Base class for errors that are safe to expose to an API client."""
+    """可安全暴露给 API 客户端的错误基类。"""
 
     status_code = 400
 
@@ -15,55 +15,61 @@ class DomainError(Exception):
 
 
 class ResourceNotFoundError(DomainError):
-    """Raised when a requested domain resource does not exist."""
+    """请求的领域资源不存在时抛出。"""
 
     status_code = 404
 
 
 class LLMAnalysisError(DomainError):
-    """Raised when an LLM-powered analysis cannot produce a valid result."""
+    """大语言模型分析无法生成有效结果时抛出。"""
 
     status_code = 503
 
 
+class AnalysisPersistenceError(DomainError):
+    """分析结果无法可靠保存时抛出。"""
+
+    status_code = 500
+
+
 class ResumeAnalysisNotReadyError(DomainError):
-    """Raised when matching is requested before resume analysis succeeds."""
+    """简历分析成功前请求匹配时抛出。"""
 
     status_code = 409
 
 
 class UnsupportedFileTypeError(DomainError):
-    """Raised when an uploaded file format is outside the supported set."""
+    """上传文件格式不在支持范围内时抛出。"""
 
     status_code = 415
 
 
 class FileTooLargeError(DomainError):
-    """Raised when an upload exceeds the configured byte limit."""
+    """上传内容超过配置的字节限制时抛出。"""
 
     status_code = 413
 
 
 class InvalidFileError(DomainError):
-    """Raised when an allowed file cannot produce usable resume text."""
+    """允许的文件无法生成可用简历文本时抛出。"""
 
     status_code = 422
 
 
 class JobRequirementNotFoundError(DomainError):
-    """Raised when matching against a job that has no stored analysis."""
+    """匹配尚无已保存分析的岗位时抛出。"""
 
     status_code = 404
 
 
 class GroundingValidationError(DomainError):
-    """Raised when an answer cites evidence outside the retrieval context."""
+    """回答引用检索上下文之外的证据时抛出。"""
 
     status_code = 502
 
 
 def register_exception_handlers(application: FastAPI) -> None:
-    """Register consistent responses for domain-level failures."""
+    """为领域层失败注册一致的响应。"""
 
     @application.exception_handler(DomainError)
     async def handle_domain_error(

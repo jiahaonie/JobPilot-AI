@@ -1,4 +1,4 @@
-"""Application configuration and environment loading."""
+"""应用配置与环境变量加载。"""
 
 from functools import lru_cache
 from typing import Literal
@@ -7,7 +7,7 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
 class Settings(BaseSettings):
-    """Runtime settings shared by the application composition root."""
+    """应用组合根共享的运行时配置。"""
 
     app_name: str = "JobPilot AI"
     environment: Literal["development", "test", "staging", "production"] = "development"
@@ -45,6 +45,5 @@ class Settings(BaseSettings):
 
 @lru_cache
 def get_settings() -> Settings:
-    """Return the process-wide settings instance."""
-
+    """返回进程级配置实例。"""
     return Settings()

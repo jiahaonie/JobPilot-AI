@@ -1,4 +1,4 @@
-"""FastAPI application composition root."""
+"""基于 FastAPI 的应用组合根。"""
 
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
@@ -16,8 +16,7 @@ def create_app(
     settings: Settings | None = None,
     database: Database | None = None,
 ) -> FastAPI:
-    """Create an application with replaceable settings and persistence."""
-
+    """使用可替换配置和持久化组件创建应用。"""
     effective_settings = settings or get_settings()
     effective_database = database or Database(effective_settings)
 

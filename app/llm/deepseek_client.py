@@ -1,4 +1,4 @@
-"""DeepSeek provider adapter that satisfies the structured-output contract."""
+"""满足结构化输出约定的 DeepSeek 服务商适配器。"""
 
 import json
 from typing import Any
@@ -7,6 +7,7 @@ import httpx
 
 from app.llm.client import ModelT
 from app.llm.exceptions import (
+    LLMProviderError,
     LLMRateLimitError,
     LLMTimeoutError,
     StructuredOutputError,
@@ -15,7 +16,7 @@ from app.llm.structured import parse_structured_output
 
 
 class _TransientHTTPError(Exception):
-    """Wraps a retryable HTTP failure so the retry loop can distinguish it."""
+    """包装可重试 HTTP 错误，供重试循环识别。"""
 
     def __init__(self, status_code: int, original: BaseException) -> None:
         super().__init__(status_code)
@@ -24,7 +25,7 @@ class _TransientHTTPError(Exception):
 
 
 class DeepSeekStructuredClient:
-    """OpenAI-compatible client calling the DeepSeek chat-completions endpoint."""
+    """调用 DeepSeek 对话补全接口的 OpenAI 兼容客户端。"""
 
     def __init__(
         self,
@@ -47,8 +48,7 @@ class DeepSeekStructuredClient:
         prompt: str,
         response_model: type[ModelT],
     ) -> ModelT:
-        """Complete a prompt and return an instance of response_model."""
-
+        """完成提示词请求并返回指定响应模型的实例。"""
         payload: dict[str, Any] = {
             "model": self.model,
             "messages": [
@@ -67,8 +67,7 @@ class DeepSeekStructuredClient:
         return self._parse_content(response, response_model)
 
     def _request(self, payload: dict[str, Any]) -> dict[str, Any]:
-        """POST the chat-completion request, retrying transient failures."""
-
+        """发送对话补全请求，并重试临时错误。"""
         attempt = 0
         while True:
             attempt += 1
@@ -76,21 +75,25 @@ class DeepSeekStructuredClient:
                 return self._post_once(payload)
             except httpx.TimeoutException as exc:
                 if attempt > self.max_retries:
-                    raise LLMTimeoutError(
-                        "The LLM provider timed out before answering."
-                    ) from exc
+                    raise LLMTimeoutError("The LLM provider timed out before answering.") from exc
+            except httpx.RequestError as exc:
+                raise LLMProviderError("The LLM provider request failed.") from exc
             except _TransientHTTPError as exc:
                 if attempt > self.max_retries:
                     if exc.status_code == 429:
                         raise LLMRateLimitError(
-                            "The LLM provider rate limit was hit and retries were "
-                            "exhausted."
+                            "The LLM provider rate limit was hit and retries were exhausted."
                         ) from exc
-                    raise exc.original from exc
+                    raise LLMProviderError(
+                        f"The LLM provider returned HTTP {exc.status_code}."
+                    ) from exc.original
+            except httpx.HTTPStatusError as exc:
+                raise LLMProviderError(
+                    f"The LLM provider returned HTTP {exc.response.status_code}."
+                ) from exc
 
     def _post_once(self, payload: dict[str, Any]) -> dict[str, Any]:
-        """Perform a single network attempt and return the JSON response."""
-
+        """执行一次网络请求并返回 JSON 响应。"""
         url = f"{self.base_url}/chat/completions"
         headers = {
             "Authorization": f"Bearer {self.api_key}",
@@ -98,18 +101,23 @@ class DeepSeekStructuredClient:
         }
         with httpx.Client(timeout=self.timeout_seconds) as client:
             response = client.post(url, json=payload, headers=headers)
-        if response.status_code == 429 or response.status_code >= 500:
-            raise _TransientHTTPError(response.status_code, response.raise_for_status)
-        response.raise_for_status()
-        return response.json()
+        try:
+            response.raise_for_status()
+        except httpx.HTTPStatusError as exc:
+            if response.status_code == 429 or response.status_code >= 500:
+                raise _TransientHTTPError(response.status_code, exc) from exc
+            raise
+        try:
+            return response.json()
+        except ValueError as exc:
+            raise StructuredOutputError("The LLM provider response was not valid JSON.") from exc
 
     def _parse_content(
         self,
         response: dict[str, Any],
         response_model: type[ModelT],
     ) -> ModelT:
-        """Extract and validate the model payload into the response model."""
-
+        """提取模型载荷，并按响应模型完成校验。"""
         try:
             content = response["choices"][0]["message"]["content"]
             payload = json.loads(content)

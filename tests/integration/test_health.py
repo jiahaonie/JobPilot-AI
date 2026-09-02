@@ -1,4 +1,4 @@
-"""HTTP health endpoint tests."""
+"""健康检查 HTTP 端点测试。"""
 
 
 def test_health_endpoint(client) -> None:

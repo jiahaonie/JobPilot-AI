@@ -1,4 +1,4 @@
-"""Application use cases."""
+"""应用用例。"""
 
 from app.services.job import JobService
 

@@ -1,4 +1,4 @@
-"""Persisted match-report response contracts."""
+"""持久化匹配报告响应契约。"""
 
 from datetime import datetime
 
@@ -8,7 +8,7 @@ from app.schemas.matching import MatchReport
 
 
 class MatchReportRead(MatchReport):
-    """One stored matching snapshot with source and scoring metadata."""
+    """带来源和评分元数据的一份已存储匹配快照。"""
 
     model_config = ConfigDict(from_attributes=True)
 

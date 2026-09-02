@@ -1,9 +1,8 @@
-"""Security helpers shared by future authentication and observability code."""
+"""供日志记录使用的敏感信息处理辅助函数。"""
 
 
 def redact_secret(value: str | None, visible_characters: int = 4) -> str:
-    """Return a log-safe representation without exposing a complete secret."""
-
+    """返回适合日志记录且不会暴露完整密钥的表示。"""
     if not value:
         return ""
     if visible_characters < 0:

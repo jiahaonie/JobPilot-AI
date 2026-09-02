@@ -1,4 +1,6 @@
-"""Resume-to-job matching: pure logic, no LLM involved."""
+"""简历与岗位的纯逻辑匹配，不调用 LLM。"""
+
+from collections.abc import Callable
 
 from sqlalchemy.orm import Session
 
@@ -19,7 +21,7 @@ PREFERRED_WEIGHT = 20
 
 
 class MatchService:
-    """Compare a resume's skills against one job's structured requirements."""
+    """根据岗位结构化要求匹配简历技能。"""
 
     def __init__(
         self,
@@ -32,13 +34,10 @@ class MatchService:
         self.normalizer = normalizer or SkillNormalizer()
 
     def match(self, job_id: int, resume_id: int) -> MatchReport:
-        """Build an explained skill report for one resume against one job."""
-
+        """生成一份可解释的简历岗位技能匹配报告。"""
         requirement = self.job_requirement_repository.get_by_job(job_id)
         if requirement is None:
-            raise JobRequirementNotFoundError(
-                f"Job {job_id} has not been analyzed yet"
-            )
+            raise JobRequirementNotFoundError(f"Job {job_id} has not been analyzed yet")
         resume = self.resume_repository.get(resume_id)
         if resume is None:
             raise ResourceNotFoundError(f"Resume {resume_id} was not found")
@@ -47,27 +46,24 @@ class MatchService:
                 f"Resume {resume_id} analysis is {resume.analysis_status}"
             )
 
-        resume_normalized = {
-            self.normalizer.canonical_name(skill) for skill in resume.skills
-        }
+        resume_normalized = {self.normalizer.canonical_name(skill) for skill in resume.skills}
         evidence_by_skill = self._evidence_lookup(requirement.evidence)
 
-        matched_skills: list[str] = []
-        for skill in requirement.required_skills:
-            if self.normalizer.canonical_name(skill) in resume_normalized:
-                matched_skills.append(skill)
-
-        bonus_skills: list[str] = []
-        for skill in requirement.preferred_skills:
-            if self.normalizer.canonical_name(skill) in resume_normalized:
-                bonus_skills.append(skill)
-
-        missing_skills: list[SkillGap] = []
-        for skill in requirement.required_skills:
-            if self.normalizer.canonical_name(skill) not in resume_normalized:
-                missing_skills.append(
-                    SkillGap(skill=skill, evidence=evidence_by_skill(skill))
-                )
+        matched_skills = [
+            skill
+            for skill in requirement.required_skills
+            if self.normalizer.canonical_name(skill) in resume_normalized
+        ]
+        bonus_skills = [
+            skill
+            for skill in requirement.preferred_skills
+            if self.normalizer.canonical_name(skill) in resume_normalized
+        ]
+        missing_skills = [
+            SkillGap(skill=skill, evidence=evidence_by_skill(skill))
+            for skill in requirement.required_skills
+            if self.normalizer.canonical_name(skill) not in resume_normalized
+        ]
 
         priority_skills = missing_skills[:PRIORITY_LIMIT]
         skill_coverage_score, required_score, preferred_score = self._scores(
@@ -86,14 +82,12 @@ class MatchService:
             priority_skills=priority_skills,
         )
 
-    def _evidence_lookup(self, evidence: list[str]):
-        """Return a function mapping a skill to its supporting job text."""
+    def _evidence_lookup(self, evidence: list[str]) -> Callable[[str], str | None]:
+        """返回用于查找技能支撑原文的函数。"""
 
         def find(skill: str) -> str | None:
-            accepted_terms = self.normalizer.evidence_terms(skill)
             for excerpt in evidence:
-                normalized_excerpt = self.normalizer.normalize_evidence(excerpt)
-                if any(term in normalized_excerpt for term in accepted_terms):
+                if self.normalizer.contains_evidence(excerpt, skill):
                     return excerpt
             return None
 
@@ -107,8 +101,7 @@ class MatchService:
         matched_preferred: int,
         total_preferred: int,
     ) -> tuple[float | None, float | None, float | None]:
-        """Return deterministic weighted skill-coverage score components."""
-
+        """返回确定性的加权技能覆盖分数。"""
         if total_required == 0:
             return None, None, None
 

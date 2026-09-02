@@ -1,4 +1,4 @@
-"""Top-level API router."""
+"""顶层 API 路由。"""
 
 from fastapi import APIRouter
 

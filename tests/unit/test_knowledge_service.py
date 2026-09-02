@@ -32,9 +32,7 @@ class RecordingVectorIndex:
     """记录 Service 对 Chroma 的写入与清理。"""
 
     def __init__(self) -> None:
-        self.upsert_calls: list[
-            tuple[list[DocumentChunk], list[list[float]]]
-        ] = []
+        self.upsert_calls: list[tuple[list[DocumentChunk], list[list[float]]]] = []
         self.deleted_document_ids: list[str] = []
 
     def upsert(
@@ -62,8 +60,7 @@ def add_document(
     source_name: str = "notes.txt",
     status: DocumentStatus = DocumentStatus.READY,
 ) -> KnowledgeDocument:
-    """Persist one document for management-use-case tests."""
-
+    """为管理用例测试保存一个文档。"""
     document = KnowledgeDocument(
         source_name=source_name,
         content_type="text/plain",

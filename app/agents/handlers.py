@@ -1,4 +1,4 @@
-"""Real application handlers exposed to the model-selected tool workflow."""
+"""向模型选工具工作流开放的真实应用处理器。"""
 
 from sqlalchemy.orm import Session
 
@@ -20,17 +20,14 @@ def build_real_tool_specs(
     session: Session,
     search_service: KnowledgeSearchService,
 ) -> tuple[ToolSpec, ...]:
-    """Bind three model-visible tools to real repositories and services."""
-
+    """将三个模型可见工具绑定到真实仓库和服务。"""
     requirement_repository = JobRequirementRepository(session)
     match_service = MatchService(session)
 
     def get_job_requirements(arguments: GetJobRequirementsInput) -> dict:
         row = requirement_repository.get_by_job(arguments.job_id)
         if row is None:
-            raise JobRequirementNotFoundError(
-                f"Job {arguments.job_id} has not been analyzed yet"
-            )
+            raise JobRequirementNotFoundError(f"Job {arguments.job_id} has not been analyzed yet")
         return JobRequirement(
             job_title=row.job_title,
             required_skills=row.required_skills,

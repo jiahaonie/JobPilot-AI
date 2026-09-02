@@ -1,11 +1,10 @@
-"""Logging setup kept separate from business code."""
+"""与业务代码分离的日志配置。"""
 
 import logging
 
 
 def configure_logging(level: int = logging.INFO) -> None:
-    """Configure a predictable default logger for local development."""
-
+    """为本地开发配置行为可预测的默认日志器。"""
     logging.basicConfig(
         level=level,
         format="%(asctime)s %(levelname)s %(name)s %(message)s",

@@ -1,4 +1,4 @@
-"""Knowledge-base HTTP endpoints."""
+"""知识库 HTTP 端点。"""
 
 from pathlib import Path
 from typing import Annotated
@@ -40,8 +40,7 @@ def list_knowledge_documents(
         get_knowledge_document_management_service
     ),
 ) -> list[KnowledgeDocumentRead]:
-    """List indexed documents and their lifecycle states."""
-
+    """列出已索引文档及其生命周期状态。"""
     return service.list_documents(offset=offset, limit=limit)
 
 
@@ -52,8 +51,7 @@ def get_knowledge_document(
         get_knowledge_document_management_service
     ),
 ) -> KnowledgeDocumentDetail:
-    """Return one document including its original uploaded text."""
-
+    """返回一个文档及其原始上传文本。"""
     return service.get(document_id)
 
 
@@ -67,8 +65,7 @@ def create_knowledge_document(
     service: KnowledgeDocumentService = Depends(get_knowledge_document_service),
     settings: Settings = Depends(get_settings),
 ) -> KnowledgeDocumentRead:
-    """Validate an uploaded text document and index it into the knowledge base."""
-
+    """校验上传的文本文档，并将其索引到知识库。"""
     source_name = Path(file.filename or "").name.strip()
     if not source_name:
         raise HTTPException(
@@ -122,8 +119,7 @@ def delete_knowledge_document(
         get_knowledge_document_management_service
     ),
 ) -> None:
-    """Delete one document and all of its Chroma chunks."""
-
+    """删除一个文档及其全部 Chroma 分块。"""
     service.delete(document_id)
 
 
@@ -132,8 +128,7 @@ def search_knowledge(
     payload: KnowledgeSearchRequest,
     service: KnowledgeSearchService = Depends(get_knowledge_search_service),
 ) -> KnowledgeSearchResponse:
-    """Return Top-K semantic matches after cosine-distance filtering."""
-
+    """经过余弦距离过滤后返回 Top-K 语义匹配。"""
     return service.search(
         query=payload.query,
         top_k=payload.top_k,

@@ -1,4 +1,4 @@
-"""Database engine and session lifecycle."""
+"""数据库引擎与会话生命周期。"""
 
 import sqlite3
 from collections.abc import Generator, Iterator
@@ -12,8 +12,7 @@ from app.core.config import Settings
 
 
 def _engine_options(database_url: str) -> dict[str, object]:
-    """Return options that keep SQLite usable with FastAPI request handlers."""
-
+    """返回确保 SQLite 可供 FastAPI 请求处理器使用的选项。"""
     if database_url.startswith("sqlite"):
         return {"connect_args": {"check_same_thread": False}}
     return {"pool_pre_ping": True}
@@ -23,8 +22,7 @@ def _enable_sqlite_foreign_keys(
     dbapi_connection: sqlite3.Connection,
     _connection_record: object,
 ) -> None:
-    """Enable foreign-key enforcement for every new SQLite connection."""
-
+    """为每个新 SQLite 连接启用外键约束。"""
     cursor = dbapi_connection.cursor()
     try:
         cursor.execute("PRAGMA foreign_keys=ON")
@@ -33,7 +31,7 @@ def _enable_sqlite_foreign_keys(
 
 
 class Database:
-    """Small composition object that makes the persistence boundary testable."""
+    """使持久化边界可测试的小型组合对象。"""
 
     def __init__(self, settings: Settings) -> None:
         self.engine: Engine = create_engine(
@@ -51,8 +49,7 @@ class Database:
 
     @contextmanager
     def session(self) -> Iterator[Session]:
-        """Yield a session and roll back if the caller raises."""
-
+        """提供会话，并在调用方抛出异常时回滚。"""
         session = self.session_factory()
         try:
             yield session
@@ -63,14 +60,12 @@ class Database:
             session.close()
 
     def get_session(self) -> Generator[Session]:
-        """Expose the session context as a FastAPI dependency."""
-
+        """将会话上下文作为 FastAPI 依赖提供。"""
         with self.session() as session:
             yield session
 
     def create_all(self) -> None:
-        """Create tables only for explicitly isolated test databases."""
-
+        """仅为明确隔离的测试数据库创建表。"""
         from app.models import (  # noqa: F401
             Job,  # noqa: F401
             JobRequirementRow,
@@ -84,13 +79,11 @@ class Database:
         Base.metadata.create_all(bind=self.engine)
 
     def dispose(self) -> None:
-        """Release the underlying connection pool."""
-
+        """释放底层连接池。"""
         self.engine.dispose()
 
 
 def get_db(request: Request) -> Generator[Session]:
-    """Resolve the database configured on the current FastAPI application."""
-
+    """解析当前 FastAPI 应用配置的数据库。"""
     database: Database = request.app.state.database
     yield from database.get_session()

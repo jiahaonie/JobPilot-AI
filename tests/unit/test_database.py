@@ -1,4 +1,4 @@
-"""Unit tests for database engine configuration."""
+"""数据库引擎配置的单元测试。"""
 
 import pytest
 from sqlalchemy.exc import IntegrityError
@@ -26,8 +26,7 @@ def test_sqlite_connections_enforce_foreign_keys() -> None:
                 ")"
             )
 
-        with pytest.raises(IntegrityError):
-            with database.engine.begin() as connection:
-                connection.exec_driver_sql("INSERT INTO child (id, parent_id) VALUES (1, 999)")
+        with pytest.raises(IntegrityError), database.engine.begin() as connection:
+            connection.exec_driver_sql("INSERT INTO child (id, parent_id) VALUES (1, 999)")
     finally:
         database.dispose()

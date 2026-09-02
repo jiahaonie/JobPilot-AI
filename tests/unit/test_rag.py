@@ -1,4 +1,4 @@
-"""Unit tests for the replaceable RAG boundary."""
+"""可替换 RAG 边界的单元测试。"""
 
 import pytest
 
@@ -37,9 +37,7 @@ def test_parser_preserves_markdown_paragraph_boundaries() -> None:
 
 def test_chunker_prefers_chinese_semicolon_boundary() -> None:
     document = ParsedDocument(
-        document_id="doc-1",
-        source_name="notes.txt",
-        text="第一部分；第二部分内容很长"
+        document_id="doc-1", source_name="notes.txt", text="第一部分；第二部分内容很长"
     )
 
     chunks = TextChunker(chunk_size=8, overlap=0).chunk(document)

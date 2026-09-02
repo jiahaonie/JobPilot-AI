@@ -1,4 +1,4 @@
-"""Persisted immutable snapshots of resume-to-job match results."""
+"""简历岗位匹配结果的持久化不可变快照。"""
 
 from datetime import UTC, datetime
 
@@ -9,13 +9,12 @@ from app.models.base import Base
 
 
 def utc_now() -> datetime:
-    """Return a timezone-aware timestamp for application records."""
-
+    """返回供应用记录使用的带时区时间戳。"""
     return datetime.now(UTC)
 
 
 class MatchReportRow(Base):
-    """One immutable matching snapshot tied to a job and resume."""
+    """关联岗位与简历的一份不可变匹配快照。"""
 
     __tablename__ = "match_reports"
 

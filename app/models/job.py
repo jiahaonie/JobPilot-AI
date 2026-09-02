@@ -1,4 +1,4 @@
-"""Job persistence model."""
+"""岗位持久化模型。"""
 
 from datetime import UTC, datetime
 
@@ -11,13 +11,12 @@ from app.models.enums import JobStatus
 
 
 def utc_now() -> datetime:
-    """Return a timezone-aware timestamp for application records."""
-
+    """返回供应用记录使用的带时区时间戳。"""
     return datetime.now(UTC)
 
 
 class Job(Base):
-    """A saved job description and its user-managed application status."""
+    """已保存的岗位描述及其用户管理的投递状态。"""
 
     __tablename__ = "jobs"
 

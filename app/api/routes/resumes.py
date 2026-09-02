@@ -1,9 +1,9 @@
-"""Resume storage, upload, and analysis HTTP endpoints."""
+"""简历存储、上传与分析 HTTP 端点。"""
 
 from pathlib import Path
 from typing import Annotated
 
-from fastapi import APIRouter, Depends, File, Form, UploadFile, status
+from fastapi import APIRouter, Depends, File, Form, Query, UploadFile, status
 
 from app.api.dependencies import (
     get_resume_analysis_service,
@@ -11,7 +11,7 @@ from app.api.dependencies import (
     get_resume_service,
 )
 from app.core.config import Settings, get_settings
-from app.schemas.resume import ResumeCreate, ResumeRead
+from app.schemas.resume import ResumeCreate, ResumeRead, ResumeSummary
 from app.services.resume import ResumeAnalysisService, ResumeService
 from app.services.resume_file import ResumeFileService
 
@@ -23,8 +23,7 @@ def create_resume(
     payload: ResumeCreate,
     service: ResumeService = Depends(get_resume_service),
 ) -> ResumeRead:
-    """Save resume text without invoking an LLM."""
-
+    """保存简历文本，不调用 LLM。"""
     return service.create(payload)
 
 
@@ -43,8 +42,7 @@ def upload_resume(
     file_service: ResumeFileService = Depends(get_resume_file_service),
     settings: Settings = Depends(get_settings),
 ) -> ResumeRead:
-    """Extract and save an uploaded resume without invoking an LLM."""
-
+    """提取并保存上传简历，不调用 LLM。"""
     content = file.file.read(settings.resume_max_upload_bytes + 1)
     parsed = file_service.parse(filename=file.filename, content=content)
     return service.create(
@@ -55,13 +53,14 @@ def upload_resume(
     )
 
 
-@router.get("", response_model=list[ResumeRead])
+@router.get("", response_model=list[ResumeSummary])
 def list_resumes(
+    offset: int = Query(default=0, ge=0),
+    limit: int = Query(default=100, ge=1, le=100),
     service: ResumeService = Depends(get_resume_service),
-) -> list[ResumeRead]:
-    """List all saved resumes."""
-
-    return service.list_all()
+) -> list[ResumeSummary]:
+    """分页返回不含简历原文的摘要。"""
+    return service.list_all(offset=offset, limit=limit)
 
 
 @router.get("/{resume_id}", response_model=ResumeRead)
@@ -69,8 +68,7 @@ def get_resume(
     resume_id: int,
     service: ResumeService = Depends(get_resume_service),
 ) -> ResumeRead:
-    """Return one saved resume with its analysis lifecycle state."""
-
+    """返回一份已保存简历及其分析生命周期状态。"""
     return service.get(resume_id)
 
 
@@ -79,8 +77,7 @@ def analyze_resume(
     resume_id: int,
     service: ResumeAnalysisService = Depends(get_resume_analysis_service),
 ) -> ResumeRead:
-    """Run or retry LLM skill extraction for one saved resume."""
-
+    """对一份已保存简历运行或重试 LLM 技能提取。"""
     return service.analyze(resume_id)
 
 
@@ -89,6 +86,5 @@ def delete_resume(
     resume_id: int,
     service: ResumeService = Depends(get_resume_service),
 ) -> None:
-    """Delete one saved resume."""
-
+    """删除一份已保存简历。"""
     service.delete(resume_id)

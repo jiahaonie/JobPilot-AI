@@ -1,4 +1,4 @@
-"""SQLAlchemy persistence models."""
+"""基于 SQLAlchemy 的持久化模型。"""
 
 from app.models.base import Base
 from app.models.enums import DocumentStatus, JobStatus, ResumeAnalysisStatus
@@ -13,8 +13,8 @@ __all__ = [
     "Base",
     "DocumentStatus",
     "Job",
-    "JobStatus",
     "JobRequirementRow",
+    "JobStatus",
     "KnowledgeDocument",
     "MatchReportRow",
     "Resume",

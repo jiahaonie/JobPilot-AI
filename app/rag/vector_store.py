@@ -1,4 +1,4 @@
-"""Vector-index port and Chroma adapter."""
+"""向量索引端口与 Chroma 适配器。"""
 
 from typing import Any, Protocol
 
@@ -9,7 +9,7 @@ from app.rag.models import DocumentChunk
 
 
 class ChromaCollection(Protocol):
-    """Subset of a Chroma collection used by the application."""
+    """应用使用的 Chroma 集合接口子集。"""
 
     def upsert(
         self,
@@ -19,7 +19,7 @@ class ChromaCollection(Protocol):
         documents: list[str],
         metadatas: list[dict[str, Any]],
     ) -> None:
-        """Create or replace chunk records."""
+        """创建或替换分块记录。"""
 
     def query(
         self,
@@ -28,14 +28,14 @@ class ChromaCollection(Protocol):
         n_results: int,
         include: list[str],
     ) -> dict[str, Any]:
-        """Return nearest records for a batch of query vectors."""
+        """为一批查询向量返回最近记录。"""
 
     def delete(self, *, where: dict[str, Any]) -> None:
-        """Delete records matching metadata."""
+        """删除符合元数据条件的记录。"""
 
 
 class VectorSearchResult(BaseModel):
-    """One Chroma match with its cosine distance."""
+    """一条带余弦距离的 Chroma 匹配。"""
 
     chunk_id: str
     chunk: DocumentChunk
@@ -43,14 +43,14 @@ class VectorSearchResult(BaseModel):
 
 
 class VectorIndex(Protocol):
-    """Application-facing vector persistence boundary."""
+    """面向应用层的向量持久化边界。"""
 
     def upsert(
         self,
         chunks: list[DocumentChunk],
         embeddings: list[list[float]],
     ) -> None:
-        """Persist chunks and their precomputed embeddings."""
+        """保存分块及其预计算嵌入。"""
 
     def query(
         self,
@@ -58,14 +58,14 @@ class VectorIndex(Protocol):
         *,
         top_k: int = 5,
     ) -> list[VectorSearchResult]:
-        """Return the nearest stored chunks."""
+        """返回最近的已存储分块。"""
 
     def delete_document(self, document_id: str) -> None:
-        """Delete every chunk belonging to one source document."""
+        """删除属于一个源文档的全部分块。"""
 
 
 class ChromaVectorIndex:
-    """Store precomputed vectors and chunk text in a Chroma collection."""
+    """在 Chroma 集合中保存预计算向量与分块文本。"""
 
     def __init__(
         self,
@@ -91,8 +91,7 @@ class ChromaVectorIndex:
         chunks: list[DocumentChunk],
         embeddings: list[list[float]],
     ) -> None:
-        """Write parallel chunk fields using deterministic IDs."""
-
+        """使用确定性编号写入对应的分块字段。"""
         if not chunks:
             return
 
@@ -109,8 +108,7 @@ class ChromaVectorIndex:
         *,
         top_k: int = 5,
     ) -> list[VectorSearchResult]:
-        """Map Chroma's first query batch back into domain objects."""
-
+        """将 Chroma 首批查询结果映射回领域对象。"""
         if not query_embedding or top_k <= 0:
             return []
 
@@ -122,8 +120,7 @@ class ChromaVectorIndex:
         return self._map_first_batch(payload)
 
     def delete_document(self, document_id: str) -> None:
-        """Delete all vectors associated with one SQLite document."""
-
+        """删除与一个 SQLite 文档关联的全部向量。"""
         self.collection.delete(where={"document_id": document_id})
 
     @staticmethod

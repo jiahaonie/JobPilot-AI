@@ -1,4 +1,4 @@
-"""Unit tests for LLM contracts without a network call."""
+"""无需网络调用的 LLM 契约单元测试。"""
 
 import pytest
 from pydantic import BaseModel

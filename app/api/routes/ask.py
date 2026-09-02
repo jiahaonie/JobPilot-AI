@@ -1,4 +1,4 @@
-"""Grounded question-answering endpoint."""
+"""有依据的问答端点。"""
 
 from fastapi import APIRouter, Depends
 
@@ -14,8 +14,7 @@ def ask_knowledge_base(
     payload: KnowledgeAskRequest,
     service: GroundedQuestionAnsweringService = Depends(get_grounded_qa_service),
 ) -> KnowledgeAskResponse:
-    """Answer only when retrieved knowledge provides usable evidence."""
-
+    """仅在检索知识提供可用证据时回答。"""
     return service.ask(
         question=payload.question,
         top_k=payload.top_k,

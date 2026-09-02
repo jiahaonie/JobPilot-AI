@@ -1,1 +1,1 @@
-"""HTTP API layer."""
+"""应用的 HTTP 接口层。"""

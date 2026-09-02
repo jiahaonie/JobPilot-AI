@@ -1,4 +1,4 @@
-"""Real local Chroma round-trip without downloading an embedding model."""
+"""无需下载嵌入模型的本地 Chroma 真实往返测试。"""
 
 import pytest
 
@@ -8,7 +8,7 @@ from app.services.search import KnowledgeSearchService
 
 
 class DeterministicEmbedder:
-    """Keep the integration test local while exercising the real Chroma adapter."""
+    """在本地集成测试中运行真实 Chroma 适配器。"""
 
     def embed_query(self, query: str) -> list[float]:
         assert query == "FastAPI dependency injection"

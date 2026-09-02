@@ -1,4 +1,4 @@
-"""Integration tests for immutable persisted match reports."""
+"""不可变持久化匹配报告的集成测试。"""
 
 import pytest
 from fastapi import FastAPI
@@ -12,8 +12,7 @@ from app.models.resume import Resume
 
 
 def seed_match_sources(application: FastAPI, client: TestClient) -> tuple[int, int]:
-    """Create one analyzed job and one ready resume without invoking an LLM."""
-
+    """不调用 LLM，创建一个已分析岗位和一份就绪简历。"""
     job_response = client.post(
         "/api/v1/jobs",
         json={

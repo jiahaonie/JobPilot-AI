@@ -1,4 +1,4 @@
-"""Create and read immutable match-report snapshots."""
+"""创建和读取不可变的匹配报告快照。"""
 
 from sqlalchemy.orm import Session
 
@@ -13,7 +13,7 @@ SCORING_VERSION = "skill-coverage-v1"
 
 
 class MatchReportService:
-    """Persist matching results without coupling storage to MatchService."""
+    """持久化匹配结果，同时避免存储逻辑与 MatchService 耦合。"""
 
     def __init__(self, session: Session) -> None:
         self.session = session
@@ -23,8 +23,7 @@ class MatchReportService:
         self.report_repository = MatchReportRepository(session)
 
     def create(self, *, job_id: int, resume_id: int) -> MatchReportRow:
-        """Calculate a match and save all inputs needed to explain it later."""
-
+        """计算匹配结果，并保存后续解释所需的全部输入。"""
         result = self.match_service.match(job_id=job_id, resume_id=resume_id)
         requirement = self.requirement_repository.get_by_job(job_id)
         resume = self.resume_repository.get(resume_id)
@@ -55,8 +54,7 @@ class MatchReportService:
         return report
 
     def get(self, report_id: int) -> MatchReportRow:
-        """Return one stored report or a domain-level not-found error."""
-
+        """返回一份报告；不存在时抛出领域层未找到异常。"""
         report = self.report_repository.get(report_id)
         if report is None:
             raise ResourceNotFoundError(f"Match report {report_id} was not found")
@@ -70,8 +68,7 @@ class MatchReportService:
         offset: int = 0,
         limit: int = 100,
     ) -> list[MatchReportRow]:
-        """Return stored reports using bounded optional filters."""
-
+        """使用有界的可选筛选条件返回已保存报告。"""
         return self.report_repository.list(
             job_id=job_id,
             resume_id=resume_id,

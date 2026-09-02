@@ -1,4 +1,4 @@
-"""Integration coverage for the three real Agent tool handlers."""
+"""三个真实 Agent 工具处理器的集成测试。"""
 
 from app.agents.handlers import build_real_tool_specs
 from app.agents.orchestrator import ToolRegistry
@@ -69,9 +69,7 @@ def test_three_agent_handlers_call_real_persistence_and_services(tmp_path) -> No
                 )
             )
 
-            requirements = registry.execute(
-                "get_job_requirements", {"job_id": job.id}
-            )
+            requirements = registry.execute("get_job_requirements", {"job_id": job.id})
             comparison = registry.execute(
                 "compare_resume_with_job",
                 {"job_id": job.id, "resume_id": resume.id},

@@ -1,4 +1,4 @@
-"""Unit tests for supported resume file extraction."""
+"""受支持简历文件提取的单元测试。"""
 
 from io import BytesIO
 
@@ -11,8 +11,7 @@ from app.services.resume_file import ResumeFileService
 
 
 def make_electronic_pdf(text: str = "Python FastAPI") -> bytes:
-    """Build a minimal electronic PDF with an extractable text layer."""
-
+    """构建带可提取文本层的最小电子 PDF。"""
     writer = PdfWriter()
     page = writer.add_blank_page(width=612, height=792)
     font = DictionaryObject(
@@ -23,11 +22,7 @@ def make_electronic_pdf(text: str = "Python FastAPI") -> bytes:
         }
     )
     page[NameObject("/Resources")] = DictionaryObject(
-        {
-            NameObject("/Font"): DictionaryObject(
-                {NameObject("/F1"): writer._add_object(font)}
-            )
-        }
+        {NameObject("/Font"): DictionaryObject({NameObject("/F1"): writer._add_object(font)})}
     )
     stream = DecodedStreamObject()
     stream.set_data(f"BT /F1 12 Tf 72 720 Td ({text}) Tj ET".encode("ascii"))

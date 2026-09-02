@@ -1,4 +1,4 @@
-"""Job HTTP endpoints."""
+"""岗位 HTTP 端点。"""
 
 from fastapi import APIRouter, Depends, Query, status
 from pydantic import BaseModel
@@ -24,7 +24,7 @@ router = APIRouter(prefix="/jobs", tags=["jobs"])
 
 
 class MatchRequest(BaseModel):
-    """Selects the resume to match against this job."""
+    """选择与当前岗位匹配的简历。"""
 
     resume_id: int
 
@@ -34,8 +34,7 @@ def create_job(
     payload: JobCreate,
     service: JobService = Depends(get_job_service),
 ) -> JobRead:
-    """Create and persist a job description."""
-
+    """创建并保存岗位描述。"""
     return service.create(payload)
 
 
@@ -45,8 +44,7 @@ def list_jobs(
     limit: int = Query(default=100, ge=1, le=100),
     service: JobService = Depends(get_job_service),
 ) -> list[JobRead]:
-    """List saved jobs with bounded pagination."""
-
+    """通过受限分页列出已保存岗位。"""
     return service.list(offset=offset, limit=limit)
 
 
@@ -55,8 +53,7 @@ def get_job(
     job_id: int,
     service: JobService = Depends(get_job_service),
 ) -> JobRead:
-    """Return one saved job."""
-
+    """返回一个已保存岗位。"""
     return service.get(job_id)
 
 
@@ -66,8 +63,7 @@ def update_job(
     payload: JobUpdate,
     service: JobService = Depends(get_job_service),
 ) -> JobRead:
-    """Apply a partial update to one saved job."""
-
+    """对一个已保存岗位执行部分更新。"""
     return service.update(job_id, payload)
 
 
@@ -76,8 +72,7 @@ def delete_job(
     job_id: int,
     service: JobService = Depends(get_job_service),
 ) -> None:
-    """Delete one saved job."""
-
+    """删除一个已保存岗位。"""
     service.delete(job_id)
 
 
@@ -86,8 +81,7 @@ def analyze_job(
     job_id: int,
     service: JobAnalysisService = Depends(get_job_analysis_service),
 ) -> JobRequirement:
-    """Explicitly analyze a saved JD and overwrite its latest requirements."""
-
+    """显式分析已保存 JD，并覆盖最新岗位要求。"""
     return service.analyze_job(job_id)
 
 
@@ -96,8 +90,7 @@ def get_job_requirements(
     job_id: int,
     service: JobRequirementService = Depends(get_job_requirement_service),
 ) -> JobRequirement:
-    """Read stored requirements without invoking an LLM or writing data."""
-
+    """读取已保存要求，不调用 LLM，也不写入数据。"""
     return service.get(job_id)
 
 
@@ -107,8 +100,7 @@ def match_job_with_resume(
     payload: MatchRequest,
     service: MatchService = Depends(get_match_service),
 ) -> MatchReport:
-    """Compare a saved resume against this job's structured requirements."""
-
+    """将已保存简历与岗位结构化要求比较。"""
     return service.match(job_id=job_id, resume_id=payload.resume_id)
 
 
@@ -122,6 +114,5 @@ def create_match_report(
     payload: MatchRequest,
     service: MatchReportService = Depends(get_match_report_service),
 ) -> MatchReportRead:
-    """Calculate and persist an immutable resume-to-job match report."""
-
+    """计算并保存不可变的简历岗位匹配报告。"""
     return service.create(job_id=job_id, resume_id=payload.resume_id)

@@ -1,4 +1,4 @@
-"""Document parsing ports and the first plain-text adapter."""
+"""文档解析端口与首个纯文本适配器。"""
 
 import re
 
@@ -6,11 +6,10 @@ from app.rag.models import ParsedDocument
 
 
 class PlainTextParser:
-    """Parse already-decoded text while keeping the parser replaceable."""
+    """解析已解码文本，同时保持解析器可替换。"""
 
     def parse(self, *, document_id: str, source_name: str, text: str) -> ParsedDocument:
-        """Normalize horizontal whitespace while preserving paragraph boundaries."""
-
+        """规范化横向空白，同时保留段落边界。"""
         normalized_newlines = text.replace("\r\n", "\n").replace("\r", "\n")
         lines = [re.sub(r"[ \t]+", " ", line).strip() for line in normalized_newlines.split("\n")]
 

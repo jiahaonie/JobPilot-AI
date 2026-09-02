@@ -1,4 +1,4 @@
-"""Alembic migration tests against an isolated SQLite database."""
+"""基于隔离 SQLite 数据库的 Alembic 迁移测试。"""
 
 from pathlib import Path
 

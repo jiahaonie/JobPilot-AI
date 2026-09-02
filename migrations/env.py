@@ -6,12 +6,10 @@ from sqlalchemy import engine_from_config, pool
 from app.core.config import Settings
 from app.models import Base
 
-# this is the Alembic Config object, which provides
-# access to the values within the .ini file in use.
+# 迁移工具配置对象，用于访问当前 .ini 文件中的配置值。
 config = context.config
 
-# Interpret the config file for Python logging.
-# This line sets up loggers basically.
+# 读取配置文件并初始化 Python 日志器。
 if config.config_file_name is not None:
     fileConfig(config.config_file_name)
 
@@ -21,8 +19,7 @@ target_metadata = Base.metadata
 
 
 def _configure_context(**kwargs: object) -> None:
-    """Apply shared schema-comparison options for SQLite and future databases."""
-
+    """应用 SQLite 与后续数据库共用的模型比较选项。"""
     context.configure(
         target_metadata=target_metadata,
         compare_type=True,
@@ -32,17 +29,7 @@ def _configure_context(**kwargs: object) -> None:
 
 
 def run_migrations_offline() -> None:
-    """Run migrations in 'offline' mode.
-
-    This configures the context with just a URL
-    and not an Engine, though an Engine is acceptable
-    here as well.  By skipping the Engine creation
-    we don't even need a DBAPI to be available.
-
-    Calls to context.execute() here emit the given string to the
-    script output.
-
-    """
+    """以离线模式运行迁移，仅通过数据库地址生成迁移脚本。"""
     url = config.get_main_option("sqlalchemy.url")
     _configure_context(
         url=url,
@@ -55,12 +42,7 @@ def run_migrations_offline() -> None:
 
 
 def run_migrations_online() -> None:
-    """Run migrations in 'online' mode.
-
-    In this scenario we need to create an Engine
-    and associate a connection with the context.
-
-    """
+    """以在线模式运行迁移，并将数据库连接绑定到迁移上下文。"""
     connectable = engine_from_config(
         config.get_section(config.config_ini_section, {}),
         prefix="sqlalchemy.",

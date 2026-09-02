@@ -1,4 +1,4 @@
-"""Retrieval port and a dependency-free lexical baseline."""
+"""检索端口与无依赖词法基线。"""
 
 import re
 from typing import Protocol
@@ -9,14 +9,14 @@ from app.rag.models import DocumentChunk
 
 
 class RetrievedChunk(BaseModel):
-    """A chunk paired with a retrieval score."""
+    """带检索分数的分块。"""
 
     chunk: DocumentChunk
     score: float
 
 
 class Retriever(Protocol):
-    """Port for a vector, hybrid, or lexical retrieval implementation."""
+    """向量、混合或词法检索实现的端口。"""
 
     def retrieve(
         self,
@@ -25,11 +25,11 @@ class Retriever(Protocol):
         *,
         top_k: int = 5,
     ) -> list[RetrievedChunk]:
-        """Return the most relevant chunks."""
+        """返回最相关的分块。"""
 
 
 class LexicalRetriever:
-    """Small local baseline useful before an embedding store is selected."""
+    """选择嵌入存储前可用的小型本地基线。"""
 
     def retrieve(
         self,

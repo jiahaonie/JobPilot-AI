@@ -1,1 +1,1 @@
-"""Cross-cutting application concerns."""
+"""应用横切关注点。"""

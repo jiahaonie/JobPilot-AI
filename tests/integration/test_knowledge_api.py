@@ -1,4 +1,4 @@
-"""HTTP tests for knowledge-document uploads."""
+"""知识文档上传的 HTTP 测试。"""
 
 from datetime import UTC, datetime
 
@@ -12,7 +12,7 @@ from app.schemas.knowledge import KnowledgeDocumentDetail, KnowledgeDocumentRead
 
 
 class RecordingKnowledgeService:
-    """Record validated upload fields without loading a real embedding model."""
+    """不加载真实嵌入模型，记录已校验的上传字段。"""
 
     def __init__(self) -> None:
         self.create_calls: list[dict[str, str]] = []
@@ -156,9 +156,7 @@ def test_rejects_empty_document(application, client) -> None:
 
 def test_lists_and_gets_knowledge_documents(application, client) -> None:
     service = RecordingKnowledgeService()
-    application.dependency_overrides[get_knowledge_document_management_service] = (
-        lambda: service
-    )
+    application.dependency_overrides[get_knowledge_document_management_service] = lambda: service
 
     list_response = client.get(
         "/api/v1/knowledge/documents",
@@ -176,9 +174,7 @@ def test_lists_and_gets_knowledge_documents(application, client) -> None:
 
 def test_deletes_knowledge_document(application, client) -> None:
     service = RecordingKnowledgeService()
-    application.dependency_overrides[get_knowledge_document_management_service] = (
-        lambda: service
-    )
+    application.dependency_overrides[get_knowledge_document_management_service] = lambda: service
 
     response = client.delete("/api/v1/knowledge/documents/7")
 

@@ -1,4 +1,4 @@
-"""Health endpoint."""
+"""健康检查端点。"""
 
 from fastapi import APIRouter, Request
 
@@ -9,8 +9,7 @@ router = APIRouter(tags=["health"])
 
 @router.get("/health", response_model=HealthResponse)
 def health(request: Request) -> HealthResponse:
-    """Return a lightweight liveness response without touching the database."""
-
+    """不访问数据库，返回轻量存活响应。"""
     return HealthResponse(
         status="ok",
         service=request.app.state.settings.app_name,

@@ -1,4 +1,4 @@
-"""Knowledge-base API contracts."""
+"""知识库 API 契约。"""
 
 from datetime import datetime
 
@@ -8,7 +8,7 @@ from app.models.enums import DocumentStatus
 
 
 class KnowledgeDocumentRead(BaseModel):
-    """Document metadata returned after indexing or listing."""
+    """索引或列表接口返回的文档元数据。"""
 
     model_config = ConfigDict(from_attributes=True)
 
@@ -23,13 +23,13 @@ class KnowledgeDocumentRead(BaseModel):
 
 
 class KnowledgeDocumentDetail(KnowledgeDocumentRead):
-    """Document metadata plus the original uploaded text."""
+    """包含原始上传文本的文档元数据。"""
 
     raw_text: str
 
 
 class KnowledgeSearchRequest(BaseModel):
-    """Semantic-search parameters supplied by an API client."""
+    """接口客户端提供的语义搜索参数。"""
 
     query: str = Field(min_length=1, max_length=2_000)
     top_k: int = Field(default=5, ge=1, le=20)
@@ -38,8 +38,7 @@ class KnowledgeSearchRequest(BaseModel):
     @field_validator("query")
     @classmethod
     def validate_query(cls, value: str) -> str:
-        """Reject whitespace-only queries and keep the normalized text."""
-
+        """拒绝只有空白的查询，并保留规范化文本。"""
         normalized = value.strip()
         if not normalized:
             raise ValueError("query cannot be blank")
@@ -47,7 +46,7 @@ class KnowledgeSearchRequest(BaseModel):
 
 
 class KnowledgeSearchResult(BaseModel):
-    """One retrieved chunk and its Chroma cosine distance."""
+    """一个检索分块及其 Chroma 余弦距离。"""
 
     chunk_id: str
     document_id: int
@@ -58,7 +57,7 @@ class KnowledgeSearchResult(BaseModel):
 
 
 class KnowledgeSearchResponse(BaseModel):
-    """Ranked chunks returned independently of answer generation."""
+    """独立于回答生成返回的已排序分块。"""
 
     query: str
     max_distance: float
@@ -66,7 +65,7 @@ class KnowledgeSearchResponse(BaseModel):
 
 
 class KnowledgeAskRequest(BaseModel):
-    """Grounded question-answering parameters."""
+    """有依据问答的参数。"""
 
     question: str = Field(min_length=1, max_length=2_000)
     top_k: int = Field(default=5, ge=1, le=20)
@@ -75,8 +74,7 @@ class KnowledgeAskRequest(BaseModel):
     @field_validator("question")
     @classmethod
     def validate_question(cls, value: str) -> str:
-        """Reject whitespace-only questions."""
-
+        """拒绝只有空白的问题。"""
         normalized = value.strip()
         if not normalized:
             raise ValueError("question cannot be blank")
@@ -84,14 +82,14 @@ class KnowledgeAskRequest(BaseModel):
 
 
 class GroundedAnswerDraft(BaseModel):
-    """Structured LLM output before citation validation."""
+    """引用校验前的结构化 LLM 输出。"""
 
     answer: str = Field(min_length=1)
     cited_chunk_ids: list[str] = Field(min_length=1)
 
 
 class KnowledgeAskResponse(BaseModel):
-    """An evidence-grounded answer or an explicit refusal."""
+    """有证据依据的回答或明确拒答。"""
 
     answer: str
     refused: bool

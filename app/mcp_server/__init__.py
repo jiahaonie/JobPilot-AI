@@ -1,1 +1,1 @@
-"""Optional Model Context Protocol server entry point."""
+"""可选的模型上下文协议服务器入口。"""

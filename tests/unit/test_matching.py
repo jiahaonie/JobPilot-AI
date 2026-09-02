@@ -1,4 +1,4 @@
-"""Unit tests for the pure-logic resume-to-job matcher."""
+"""纯逻辑简历岗位匹配器的单元测试。"""
 
 import pytest
 from sqlalchemy import create_engine
@@ -24,9 +24,7 @@ def make_requirement(session, job_id=1, required=None, preferred=None, evidence=
     row = JobRequirementRow(
         job_id=job_id,
         job_title="RAG Intern",
-        required_skills=(
-            ["Python", "FastAPI", "Vector DB"] if required is None else required
-        ),
+        required_skills=(["Python", "FastAPI", "Vector DB"] if required is None else required),
         preferred_skills=["NLP"] if preferred is None else preferred,
         evidence=(
             [
@@ -137,6 +135,20 @@ def test_missing_skill_returns_none_when_no_reliable_evidence(session) -> None:
         required=["PostgreSQL"],
         preferred=[],
         evidence=["熟悉 Python Web 开发。"],
+    )
+    make_resume(session, [])
+
+    report = MatchService(session).match(job_id=1, resume_id=1)
+
+    assert report.missing_skills[0].evidence is None
+
+
+def test_short_skill_does_not_match_inside_another_word(session) -> None:
+    make_requirement(
+        session,
+        required=["Go"],
+        preferred=[],
+        evidence=["使用 Django 开发 Web 服务。"],
     )
     make_resume(session, [])
 

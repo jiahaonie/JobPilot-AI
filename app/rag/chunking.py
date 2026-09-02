@@ -1,10 +1,10 @@
-"""Deterministic text chunking."""
+"""确定性文本分块。"""
 
 from app.rag.models import DocumentChunk, ParsedDocument
 
 
 class TextChunker:
-    """Boundary-aware character chunker with deterministic overlap."""
+    """感知边界且重叠范围确定的字符分块器。"""
 
     _BOUNDARIES = ("\n\n", "\n", "。", "！", "？", "；", ". ", "! ", "? ", ";", " ")
 
@@ -17,8 +17,7 @@ class TextChunker:
         self.overlap = overlap
 
     def chunk(self, document: ParsedDocument) -> list[DocumentChunk]:
-        """Split a normalized document into bounded, overlapping chunks."""
-
+        """将规范化文档拆分为长度受限且相互重叠的分块。"""
         text = document.text.strip()
         if not text:
             return []
@@ -47,8 +46,7 @@ class TextChunker:
         return chunks
 
     def _find_boundary(self, text: str, *, start: int, end: int) -> int:
-        """Prefer a semantic boundary in the latter half of the chunk window."""
-
+        """优先选择分块窗口后半段的语义边界。"""
         earliest_boundary = start + self.chunk_size // 2
         for separator in self._BOUNDARIES:
             boundary = text.rfind(separator, earliest_boundary, end)

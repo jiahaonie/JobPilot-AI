@@ -1,4 +1,4 @@
-"""Unit tests for the Chroma adapter without creating a real database."""
+"""无需创建真实数据库的 Chroma 适配器单元测试。"""
 
 from typing import Any
 
@@ -7,7 +7,7 @@ from app.rag.vector_store import ChromaVectorIndex
 
 
 class FakeChromaCollection:
-    """Record Chroma calls and return a configurable query payload."""
+    """记录 Chroma 调用并返回可配置查询载荷。"""
 
     def __init__(self) -> None:
         self.upsert_call: dict[str, Any] | None = None
@@ -81,12 +81,16 @@ def test_query_maps_first_chroma_batch_to_chunks() -> None:
     collection.query_payload = {
         "ids": [["document:7:chunk:0"]],
         "documents": [["FastAPI 使用 Depends。"]],
-        "metadatas": [[{
-            "document_id": "7",
-            "source_name": "notes.md",
-            "chunk_index": 0,
-            "section": "依赖注入",
-        }]],
+        "metadatas": [
+            [
+                {
+                    "document_id": "7",
+                    "source_name": "notes.md",
+                    "chunk_index": 0,
+                    "section": "依赖注入",
+                }
+            ]
+        ],
         "distances": [[0.15]],
     }
     index = ChromaVectorIndex(

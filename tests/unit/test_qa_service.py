@@ -1,4 +1,4 @@
-"""Unit tests for refusal and citation validation in grounded QA."""
+"""有依据问答中拒答与引用校验的单元测试。"""
 
 import pytest
 
@@ -50,9 +50,7 @@ def _evidence() -> KnowledgeSearchResult:
 
 
 def test_ask_refuses_without_evidence_and_does_not_call_llm() -> None:
-    client = StubLLMClient(
-        GroundedAnswerDraft(answer="unused", cited_chunk_ids=["unused"])
-    )
+    client = StubLLMClient(GroundedAnswerDraft(answer="unused", cited_chunk_ids=["unused"]))
     service = GroundedQuestionAnsweringService(
         search_service=StubSearchService([]),
         client=client,
@@ -86,9 +84,7 @@ def test_ask_returns_only_validated_citations() -> None:
 
 
 def test_ask_rejects_hallucinated_chunk_id() -> None:
-    client = StubLLMClient(
-        GroundedAnswerDraft(answer="错误引用", cited_chunk_ids=["made-up"])
-    )
+    client = StubLLMClient(GroundedAnswerDraft(answer="错误引用", cited_chunk_ids=["made-up"]))
     service = GroundedQuestionAnsweringService(
         search_service=StubSearchService([_evidence()]),
         client=client,

@@ -1,10 +1,10 @@
-"""RAG data contracts."""
+"""检索增强生成数据契约。"""
 
 from pydantic import BaseModel, Field
 
 
 class ParsedDocument(BaseModel):
-    """Normalized document text before chunking."""
+    """分块前的规范化文档文本。"""
 
     document_id: str
     source_name: str
@@ -12,7 +12,7 @@ class ParsedDocument(BaseModel):
 
 
 class DocumentChunk(BaseModel):
-    """A retrievable text segment with source metadata."""
+    """带来源元数据的可检索文本片段。"""
 
     document_id: str
     source_name: str
@@ -22,7 +22,7 @@ class DocumentChunk(BaseModel):
 
 
 class Citation(BaseModel):
-    """Source information returned alongside a generated answer."""
+    """随生成回答一起返回的来源信息。"""
 
     document_id: str
     source_name: str

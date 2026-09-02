@@ -1,4 +1,4 @@
-"""Unit-level service test with an isolated persistence adapter."""
+"""使用隔离持久化适配器的服务层单元测试。"""
 
 from app.core.config import Settings
 from app.core.database import Database

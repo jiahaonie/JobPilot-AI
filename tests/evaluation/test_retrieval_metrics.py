@@ -1,4 +1,4 @@
-"""Deterministic offline checks for retrieval quality metrics."""
+"""检索质量指标的确定性离线检查。"""
 
 import pytest
 
@@ -11,18 +11,24 @@ from app.rag.evaluation import (
 
 
 def test_recall_at_k_counts_all_relevant_chunks_in_top_k() -> None:
-    assert recall_at_k(
-        ["chunk-a", "noise", "chunk-b"],
-        {"chunk-a", "chunk-b"},
-        k=2,
-    ) == 0.5
+    assert (
+        recall_at_k(
+            ["chunk-a", "noise", "chunk-b"],
+            {"chunk-a", "chunk-b"},
+            k=2,
+        )
+        == 0.5
+    )
 
 
 def test_reciprocal_rank_uses_first_relevant_position() -> None:
-    assert reciprocal_rank(
-        ["noise-a", "chunk-b", "chunk-a"],
-        {"chunk-a", "chunk-b"},
-    ) == 0.5
+    assert (
+        reciprocal_rank(
+            ["noise-a", "chunk-b", "chunk-a"],
+            {"chunk-a", "chunk-b"},
+        )
+        == 0.5
+    )
 
 
 def test_evaluate_retrieval_averages_recall_and_mrr() -> None:

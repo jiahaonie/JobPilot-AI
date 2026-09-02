@@ -1,4 +1,4 @@
-"""Evidence-grounded question answering."""
+"""基于证据的问答服务。"""
 
 from app.core.exceptions import GroundingValidationError
 from app.llm.client import StructuredLLMClient
@@ -13,7 +13,7 @@ INSUFFICIENT_EVIDENCE_ANSWER = "知识库中没有足够证据回答这个问题
 
 
 class GroundedQuestionAnsweringService:
-    """Retrieve evidence, refuse empty context, and validate every model citation."""
+    """检索证据，在上下文为空时拒答，并校验模型的每条引用。"""
 
     def __init__(
         self,
@@ -31,8 +31,7 @@ class GroundedQuestionAnsweringService:
         top_k: int,
         max_distance: float | None,
     ) -> KnowledgeAskResponse:
-        """Answer from retrieved chunks or return a deterministic refusal."""
-
+        """根据检索片段回答，或返回确定性的拒答结果。"""
         search_response = self.search_service.search(
             query=question,
             top_k=top_k,
@@ -52,15 +51,12 @@ class GroundedQuestionAnsweringService:
             prompt=prompt,
             response_model=GroundedAnswerDraft,
         )
-        result_by_id = {
-            result.chunk_id: result for result in search_response.results
-        }
+        result_by_id = {result.chunk_id: result for result in search_response.results}
         cited_ids = list(dict.fromkeys(draft.cited_chunk_ids))
         invalid_ids = [chunk_id for chunk_id in cited_ids if chunk_id not in result_by_id]
         if invalid_ids:
             raise GroundingValidationError(
-                "Model cited chunks outside the retrieved evidence: "
-                + ", ".join(invalid_ids)
+                "Model cited chunks outside the retrieved evidence: " + ", ".join(invalid_ids)
             )
 
         return KnowledgeAskResponse(

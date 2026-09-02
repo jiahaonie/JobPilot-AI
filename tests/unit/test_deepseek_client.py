@@ -1,4 +1,4 @@
-"""Unit tests for the DeepSeek client without a real network call."""
+"""不发起真实网络请求的 DeepSeek 客户端单元测试。"""
 
 import httpx
 import pytest
@@ -6,6 +6,7 @@ from pydantic import BaseModel
 
 from app.llm.deepseek_client import DeepSeekStructuredClient, _TransientHTTPError
 from app.llm.exceptions import (
+    LLMProviderError,
     LLMRateLimitError,
     LLMTimeoutError,
     StructuredOutputError,
@@ -17,8 +18,7 @@ class ExampleOutput(BaseModel):
 
 
 def _transient(status_code: int) -> _TransientHTTPError:
-    """Build a transient error like _post_once would raise."""
-
+    """构建与单次请求路径一致的临时错误。"""
     return _TransientHTTPError(status_code, RuntimeError("simulated failure"))
 
 
@@ -126,6 +126,48 @@ class TestRetries:
 
         with pytest.raises(LLMTimeoutError):
             client.complete_structured(
+                prompt="ignored",
+                response_model=ExampleOutput,
+            )
+
+    def test_real_500_response_retries_then_raises_provider_error(
+        self,
+        monkeypatch,
+    ) -> None:
+        """真实响应路径应保留异常对象，而不是绑定方法。"""
+        calls = {"count": 0}
+
+        def handler(request: httpx.Request) -> httpx.Response:
+            calls["count"] += 1
+            return httpx.Response(500, request=request)
+
+        real_client = httpx.Client
+        transport = httpx.MockTransport(handler)
+        monkeypatch.setattr(
+            httpx,
+            "Client",
+            lambda **kwargs: real_client(transport=transport, **kwargs),
+        )
+
+        with pytest.raises(LLMProviderError):
+            make_client(max_retries=1).complete_structured(
+                prompt="ignored",
+                response_model=ExampleOutput,
+            )
+        assert calls["count"] == 2
+
+    def test_real_400_response_maps_to_provider_error(self, monkeypatch) -> None:
+        """不可重试的 HTTP 错误也应转换为统一 LLM 异常。"""
+        real_client = httpx.Client
+        transport = httpx.MockTransport(lambda request: httpx.Response(400, request=request))
+        monkeypatch.setattr(
+            httpx,
+            "Client",
+            lambda **kwargs: real_client(transport=transport, **kwargs),
+        )
+
+        with pytest.raises(LLMProviderError):
+            make_client().complete_structured(
                 prompt="ignored",
                 response_model=ExampleOutput,
             )

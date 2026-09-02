@@ -1,4 +1,4 @@
-"""Resume persistence model."""
+"""简历持久化模型。"""
 
 from datetime import UTC, datetime
 from typing import TYPE_CHECKING
@@ -14,13 +14,12 @@ if TYPE_CHECKING:
 
 
 def utc_now() -> datetime:
-    """Return a timezone-aware timestamp for application records."""
-
+    """返回供应用记录使用的带时区时间戳。"""
     return datetime.now(UTC)
 
 
 class Resume(Base):
-    """A saved resume with its extracted skill list."""
+    """包含已提取技能列表的已保存简历。"""
 
     __tablename__ = "resumes"
 
@@ -41,18 +40,15 @@ class Resume(Base):
 
     @property
     def analysis_status(self) -> ResumeAnalysisStatus:
-        """Expose lifecycle state while treating legacy resumes as analyzed."""
-
+        """公开生命周期状态，并将旧版简历视为已分析。"""
         return self.analysis.status if self.analysis else ResumeAnalysisStatus.READY
 
     @property
     def analysis_error(self) -> str | None:
-        """Return the latest safe analysis failure detail, if any."""
-
+        """返回最新且可安全展示的分析失败信息（若有）。"""
         return self.analysis.error_message if self.analysis else None
 
     @property
     def analyzed_at(self) -> datetime | None:
-        """Return when skill extraction most recently succeeded."""
-
+        """返回最近一次技能提取成功的时间。"""
         return self.analysis.analyzed_at if self.analysis else self.created_at

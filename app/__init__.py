@@ -1,1 +1,1 @@
-"""JobPilot AI application package."""
+"""求职助手应用包。"""

@@ -1,4 +1,4 @@
-"""Model-selected Agent tool endpoint."""
+"""由模型选择 Agent 工具的端点。"""
 
 from fastapi import APIRouter, Depends
 
@@ -14,6 +14,5 @@ def run_agent(
     payload: AgentRunRequest,
     service: AgentWorkflowService = Depends(get_agent_workflow_service),
 ) -> AgentRunResponse:
-    """Let the model choose and execute one of three registered real tools."""
-
+    """让模型选择并执行三个已注册真实工具之一。"""
     return service.run(payload.message)

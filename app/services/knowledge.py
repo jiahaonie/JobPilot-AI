@@ -11,7 +11,7 @@ from app.repositories.knowledge_document import KnowledgeDocumentRepository
 
 
 class KnowledgeDocumentManagementService:
-    """Manage persisted documents without loading an embedding model."""
+    """在不加载嵌入模型的情况下管理已持久化文档。"""
 
     def __init__(
         self,
@@ -23,8 +23,7 @@ class KnowledgeDocumentManagementService:
         self.repository = KnowledgeDocumentRepository(session)
 
     def get(self, document_id: int) -> KnowledgeDocument:
-        """Return one document or raise a domain-level not-found error."""
-
+        """返回文档；不存在时抛出领域层未找到异常。"""
         document = self.repository.get(document_id)
         if document is None:
             raise ResourceNotFoundError(f"Knowledge document {document_id} was not found")
@@ -36,13 +35,11 @@ class KnowledgeDocumentManagementService:
         offset: int = 0,
         limit: int = 100,
     ) -> list[KnowledgeDocument]:
-        """Return a bounded list of knowledge documents."""
-
+        """返回数量受限的知识文档列表。"""
         return self.repository.list_documents(offset=offset, limit=limit)
 
     def delete(self, document_id: int) -> None:
-        """Delete a document from Chroma and SQLite as one managed lifecycle."""
-
+        """在同一受管生命周期中从 Chroma 和 SQLite 删除文档。"""
         document = self.get(document_id)
         document.status = DocumentStatus.DELETING
         document.error_message = None
@@ -63,7 +60,7 @@ class KnowledgeDocumentManagementService:
 
 
 class KnowledgeDocumentService(KnowledgeDocumentManagementService):
-    """Index uploaded documents and expose the shared management operations."""
+    """索引上传文档，并提供共享的管理操作。"""
 
     def __init__(
         self,

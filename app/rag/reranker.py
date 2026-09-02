@@ -1,4 +1,4 @@
-"""Reranking port."""
+"""重排序端口。"""
 
 from typing import Protocol
 
@@ -6,7 +6,7 @@ from app.rag.retrieval import RetrievedChunk
 
 
 class Reranker(Protocol):
-    """Port for a cross-encoder or model-based reranker."""
+    """交叉编码器或模型重排序器的端口。"""
 
     def rerank(
         self,
@@ -15,11 +15,11 @@ class Reranker(Protocol):
         *,
         top_k: int = 5,
     ) -> list[RetrievedChunk]:
-        """Return reranked candidates."""
+        """返回重排序后的候选项。"""
 
 
 class IdentityReranker:
-    """Pass-through implementation until a measured reranker is added."""
+    """在加入经过评测的重排序器前使用的直通实现。"""
 
     def rerank(
         self,
@@ -29,4 +29,4 @@ class IdentityReranker:
         top_k: int = 5,
     ) -> list[RetrievedChunk]:
         del query
-        return candidates[:max(top_k, 0)]
+        return candidates[: max(top_k, 0)]

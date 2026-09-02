@@ -1,4 +1,4 @@
-"""Small human-reviewed evaluation set for deterministic skill aliases."""
+"""经过人工审阅的小型确定性技能别名评估集。"""
 
 from dataclasses import dataclass
 
@@ -29,14 +29,11 @@ EVALUATION_CASES = (
 def test_curated_skill_alias_evaluation_has_no_false_or_missed_matches() -> None:
     normalizer = SkillNormalizer()
 
-    predictions = [
-        normalizer.equivalent(case.left, case.right) for case in EVALUATION_CASES
-    ]
+    predictions = [normalizer.equivalent(case.left, case.right) for case in EVALUATION_CASES]
     expected = [case.expected_match for case in EVALUATION_CASES]
 
     true_positives = sum(
-        predicted and label
-        for predicted, label in zip(predictions, expected, strict=True)
+        predicted and label for predicted, label in zip(predictions, expected, strict=True)
     )
     predicted_positives = sum(predictions)
     actual_positives = sum(expected)

@@ -1,4 +1,4 @@
-"""Integration tests for the resume + match HTTP flow."""
+"""简历与匹配 HTTP 流程的集成测试。"""
 
 from fastapi import Depends
 from fastapi.testclient import TestClient
@@ -9,6 +9,7 @@ from app.api.dependencies import (
     get_job_analysis_service,
     get_llm_client,
 )
+from app.schemas.resume import MAX_RESUME_TEXT_CHARS
 from app.services.analysis import JobAnalysisService
 
 
@@ -119,6 +120,18 @@ def test_resume_creation_succeeds_without_llm_configuration(client) -> None:
     assert response.json()["analysis_status"] == "pending"
 
 
+def test_resume_list_is_paginated_and_omits_raw_text(client) -> None:
+    first_id = _create_resume(client)
+    _create_resume(client)
+
+    response = client.get("/api/v1/resumes?offset=1&limit=1")
+
+    assert response.status_code == 200
+    assert len(response.json()) == 1
+    assert response.json()[0]["id"] == first_id
+    assert "raw_text" not in response.json()[0]
+
+
 def test_pending_resume_cannot_be_matched(application, client) -> None:
     _override_analysis(application, FakeAnalysisLLM())
     job_id = _create_job(client)
@@ -131,3 +144,14 @@ def test_pending_resume_cannot_be_matched(application, client) -> None:
     )
 
     assert response.status_code == 409
+
+
+def test_resume_rejects_blank_and_oversized_text(client) -> None:
+    blank_response = client.post("/api/v1/resumes", json={"raw_text": "   "})
+    oversized_response = client.post(
+        "/api/v1/resumes",
+        json={"raw_text": "x" * (MAX_RESUME_TEXT_CHARS + 1)},
+    )
+
+    assert blank_response.status_code == 422
+    assert oversized_response.status_code == 422

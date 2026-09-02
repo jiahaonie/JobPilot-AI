@@ -1,4 +1,4 @@
-"""HTTP tests for resume file upload without LLM coupling."""
+"""不耦合 LLM 的简历文件上传 HTTP 测试。"""
 
 from tests.unit.test_resume_file import make_electronic_pdf
 

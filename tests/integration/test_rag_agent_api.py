@@ -1,16 +1,20 @@
-"""HTTP contracts for search, grounded QA, and Agent execution."""
+"""搜索、有依据问答与 Agent 执行的 HTTP 契约测试。"""
 
+from app.agents.orchestrator import ToolRegistry
+from app.agents.tools import GetJobRequirementsInput, ToolSpec
 from app.api.dependencies import (
     get_agent_workflow_service,
     get_grounded_qa_service,
     get_knowledge_search_service,
 )
+from app.core.exceptions import ResourceNotFoundError
 from app.schemas.agent import AgentRunResponse
 from app.schemas.knowledge import (
     KnowledgeAskResponse,
     KnowledgeSearchResponse,
     KnowledgeSearchResult,
 )
+from app.services.agent import AgentWorkflowService
 
 
 def _search_result() -> KnowledgeSearchResult:
@@ -61,6 +65,16 @@ class StubAgentService:
         )
 
 
+class MissingJobDecisionClient:
+    """固定选择缺失岗位工具的模型桩。"""
+
+    def complete_structured(self, *, prompt, response_model):
+        del prompt
+        return response_model.model_validate(
+            {"tool_name": "get_job_requirements", "arguments": {"job_id": 999}}
+        )
+
+
 def test_search_endpoint_exposes_top_k_and_distance_threshold(application, client) -> None:
     application.dependency_overrides[get_knowledge_search_service] = StubSearchService
 
@@ -99,3 +113,26 @@ def test_agent_endpoint_returns_model_choice_and_tool_result(application, client
     assert response.status_code == 200
     assert response.json()["selected_tool"] == "search_learning_material"
     assert response.json()["result"]["results"][0]["distance"] == 0.12
+
+
+def test_agent_preserves_domain_error_status(application, client) -> None:
+    def missing_job(_arguments: GetJobRequirementsInput) -> dict:
+        raise ResourceNotFoundError("Job 999 was not found")
+
+    registry = ToolRegistry(
+        [
+            ToolSpec(
+                name="get_job_requirements",
+                description="读取岗位要求。",
+                input_model=GetJobRequirementsInput,
+                handler=missing_job,
+            )
+        ]
+    )
+    application.dependency_overrides[get_agent_workflow_service] = lambda: AgentWorkflowService(
+        client=MissingJobDecisionClient(), registry=registry
+    )
+
+    response = client.post("/api/v1/agent/run", json={"message": "读取岗位 999"})
+
+    assert response.status_code == 404

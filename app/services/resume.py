@@ -1,4 +1,4 @@
-"""Resume persistence and independently triggered skill analysis."""
+"""简历持久化与独立触发的技能分析。"""
 
 from datetime import UTC, datetime
 
@@ -16,7 +16,7 @@ from app.schemas.resume import ResumeCreate, ResumeSkill
 
 
 class ResumeService:
-    """Persist and manage resumes without requiring an LLM provider."""
+    """在不依赖 LLM 服务商的情况下保存和管理简历。"""
 
     def __init__(
         self,
@@ -26,8 +26,7 @@ class ResumeService:
         self.repository = ResumeRepository(session)
 
     def create(self, payload: ResumeCreate) -> Resume:
-        """Persist source text first and leave skill analysis pending."""
-
+        """先保存原始文本，并将技能分析保持为待处理状态。"""
         resume = Resume(
             title=payload.title or _default_title(payload.raw_text),
             raw_text=payload.raw_text,
@@ -40,28 +39,25 @@ class ResumeService:
         return resume
 
     def get(self, resume_id: int) -> Resume:
-        """Return a resume or raise a domain-level not-found error."""
-
+        """返回简历；不存在时抛出领域层未找到异常。"""
         resume = self.repository.get(resume_id)
         if resume is None:
             raise ResourceNotFoundError(f"Resume {resume_id} was not found")
         return resume
 
-    def list_all(self) -> list[Resume]:
-        """Return all saved resumes."""
-
-        return self.repository.list()
+    def list_all(self, *, offset: int = 0, limit: int = 100) -> list[Resume]:
+        """返回数量受限的已保存简历。"""
+        return self.repository.list(offset=offset, limit=limit)
 
     def delete(self, resume_id: int) -> None:
-        """Delete a saved resume."""
-
+        """删除一份已保存的简历。"""
         resume = self.get(resume_id)
         self.repository.delete(resume)
         self.session.commit()
 
 
 class ResumeAnalysisService:
-    """Run and persist retryable LLM analysis for an already saved resume."""
+    """对已保存简历执行可重试的 LLM 分析并持久化结果。"""
 
     def __init__(
         self,
@@ -73,8 +69,7 @@ class ResumeAnalysisService:
         self.resume_service = ResumeService(session)
 
     def analyze(self, resume_id: int) -> Resume:
-        """Extract skills and record ready or failed lifecycle state."""
-
+        """提取技能，并记录就绪或失败的生命周期状态。"""
         resume = self.resume_service.get(resume_id)
         analysis = resume.analysis
         if analysis is None:
@@ -92,6 +87,11 @@ class ResumeAnalysisService:
             analysis.error_message = str(exc)
             self.session.commit()
             raise LLMAnalysisError(f"Skill extraction failed: {exc}") from exc
+        except Exception as exc:
+            analysis.status = ResumeAnalysisStatus.FAILED
+            analysis.error_message = "Unexpected analysis failure"
+            self.session.commit()
+            raise LLMAnalysisError("Skill extraction failed unexpectedly") from exc
 
         resume.skills = skills
         analysis.status = ResumeAnalysisStatus.READY
@@ -102,8 +102,7 @@ class ResumeAnalysisService:
         return resume
 
     def _extract_skills(self, raw_text: str) -> list[str]:
-        """Ask the LLM for a schema-validated skill list."""
-
+        """请求 LLM 返回经过结构校验的技能列表。"""
         prompt = build_resume_skill_prompt(raw_text)
         result = self.client.complete_structured(
             prompt=prompt,
@@ -113,7 +112,6 @@ class ResumeAnalysisService:
 
 
 def _default_title(raw_text: str) -> str:
-    """Derive a readable title from the start of the resume text."""
-
+    """根据简历文本开头生成可读标题。"""
     compact = " ".join(raw_text.split())
     return compact[:20] or "未命名简历"

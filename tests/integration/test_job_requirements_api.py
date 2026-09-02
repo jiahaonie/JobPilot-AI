@@ -1,4 +1,4 @@
-"""Integration tests for the job-requirements endpoint with a mocked client."""
+"""使用模拟客户端测试岗位要求端点。"""
 
 from fastapi import Depends, FastAPI
 from fastapi.testclient import TestClient
@@ -10,7 +10,7 @@ from app.services.analysis import JobAnalysisService
 
 
 class FakeLLMClient:
-    """In-memory provider adapter used to drive integration tests."""
+    """用于驱动集成测试的内存服务商适配器。"""
 
     def __init__(self, *, fail: bool = False) -> None:
         self.fail = fail
@@ -37,7 +37,7 @@ def override_analysis_dependency(
     application: FastAPI,
     client: FakeLLMClient,
 ) -> None:
-    """Point the app's analysis dependency at a fake client."""
+    """将应用的分析依赖指向模拟客户端。"""
 
     def override_service(db: Session = Depends(get_db)) -> JobAnalysisService:
         return JobAnalysisService(db, client)
@@ -97,3 +97,36 @@ def test_job_requirements_returns_404_before_analysis(client) -> None:
     response = client.get(f"/api/v1/jobs/{job_id}/requirements")
 
     assert response.status_code == 404
+
+
+def test_updating_analysis_fields_invalidates_stored_requirements(
+    application,
+    client,
+) -> None:
+    override_analysis_dependency(application, FakeLLMClient())
+    job_id = create_job(client)
+    assert client.post(f"/api/v1/jobs/{job_id}/analyze").status_code == 200
+
+    update_response = client.patch(
+        f"/api/v1/jobs/{job_id}",
+        json={"raw_text": "Updated job description."},
+    )
+
+    assert update_response.status_code == 200
+    assert update_response.json()["status"] == "pending_analysis"
+    assert client.get(f"/api/v1/jobs/{job_id}/requirements").status_code == 404
+
+
+def test_updating_unrelated_fields_keeps_stored_requirements(application, client) -> None:
+    override_analysis_dependency(application, FakeLLMClient())
+    job_id = create_job(client)
+    assert client.post(f"/api/v1/jobs/{job_id}/analyze").status_code == 200
+
+    update_response = client.patch(
+        f"/api/v1/jobs/{job_id}",
+        json={"city": "Remote", "status": "applied"},
+    )
+
+    assert update_response.status_code == 200
+    assert update_response.json()["status"] == "applied"
+    assert client.get(f"/api/v1/jobs/{job_id}/requirements").status_code == 200

@@ -1,4 +1,4 @@
-"""Shared test fixtures."""
+"""共享测试夹具。"""
 
 from collections.abc import Iterator
 from pathlib import Path
@@ -15,25 +15,15 @@ from app.main import create_app
 
 @pytest.fixture
 def tmp_path(request: pytest.FixtureRequest) -> Path:
-    """Use a workspace-local test directory in restricted Windows environments.
-
-    The standard pytest temp root is not accessible in this workspace. These
-    directories are intentionally retained for post-test inspection.
-    """
-
-    path = (
-        Path.cwd()
-        / ".pytest-work"
-        / f"{request.node.name}-{uuid4().hex}"
-    )
+    """在受限 Windows 环境中使用工作区内的测试目录。"""
+    path = Path.cwd() / ".pytest-work" / f"{request.node.name}-{uuid4().hex}"
     path.mkdir(parents=True, exist_ok=False)
     return path
 
 
 @pytest.fixture
 def application(tmp_path) -> Iterator[FastAPI]:
-    """Build an isolated application backed by a temporary SQLite database."""
-
+    """构建由临时 SQLite 数据库支持的隔离应用。"""
     settings = Settings(
         environment="test",
         database_url=f"sqlite:///{tmp_path / 'test.db'}",
@@ -45,7 +35,6 @@ def application(tmp_path) -> Iterator[FastAPI]:
 
 @pytest.fixture
 def client(application: FastAPI) -> Iterator[TestClient]:
-    """Run the app lifespan for integration tests."""
-
+    """在集成测试期间运行应用生命周期。"""
     with TestClient(application) as test_client:
         yield test_client

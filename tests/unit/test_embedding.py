@@ -1,4 +1,4 @@
-"""Unit tests for the FastEmbed adapter without downloading a real model."""
+"""无需下载真实模型的 FastEmbed 适配器单元测试。"""
 
 from array import array
 from collections.abc import Iterable
@@ -9,7 +9,7 @@ from app.rag.embedding import FastEmbedder, Vector
 
 
 class FakeTextEmbeddingModel:
-    """Record which FastEmbed path the adapter selects."""
+    """记录适配器选择的 FastEmbed 调用路径。"""
 
     def __init__(self) -> None:
         self.passage_inputs: list[str] = []
@@ -54,7 +54,7 @@ def test_embed_query_rejects_blank_text() -> None:
         embedder.embed_query("   ")
 
 
-def test_embed_documents_rejects_blank_text()-> None:
+def test_embed_documents_rejects_blank_text() -> None:
     model = FakeTextEmbeddingModel()
     embedder = FastEmbedder(model_name="fake-model", model=model)
 

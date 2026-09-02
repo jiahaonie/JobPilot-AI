@@ -1,50 +1,59 @@
-"""Tool input contracts and registration metadata."""
+"""工具输入契约与注册元数据。"""
 
 from collections.abc import Callable
 from dataclasses import dataclass
 from typing import Any
 
-from pydantic import BaseModel
+from pydantic import BaseModel, Field, field_validator
 
 
 class GetJobRequirementsInput(BaseModel):
-    """Input for reading structured requirements for one job."""
+    """读取单个岗位结构化要求的输入。"""
 
-    job_id: int
+    job_id: int = Field(ge=1)
 
 
 class CompareResumeWithJobInput(BaseModel):
-    """Input for a future resume-to-job comparison tool."""
+    """简历与岗位比较工具的输入。"""
 
-    job_id: int
-    resume_id: int
+    job_id: int = Field(ge=1)
+    resume_id: int = Field(ge=1)
 
 
 class SearchLearningMaterialInput(BaseModel):
-    """Input for knowledge-base search."""
+    """知识库搜索输入。"""
 
-    query: str
-    top_k: int = 5
-    max_distance: float | None = None
+    query: str = Field(min_length=1, max_length=2_000)
+    top_k: int = Field(default=5, ge=1, le=20)
+    max_distance: float | None = Field(default=None, ge=0.0, le=2.0)
+
+    @field_validator("query")
+    @classmethod
+    def validate_query(cls, value: str) -> str:
+        """去除查询首尾空白，并拒绝空查询。"""
+        normalized = value.strip()
+        if not normalized:
+            raise ValueError("query cannot be blank")
+        return normalized
 
 
 class CreateStudyPlanInput(BaseModel):
-    """Input for study-plan generation."""
+    """学习计划生成输入。"""
 
-    job_id: int
+    job_id: int = Field(ge=1)
     deadline: str | None = None
 
 
 class UpdateApplicationStatusInput(BaseModel):
-    """Input for an explicit application-status update."""
+    """显式更新投递状态的输入。"""
 
-    job_id: int
+    job_id: int = Field(ge=1)
     status: str
 
 
 @dataclass(frozen=True)
 class ToolSpec:
-    """A validated tool contract supplied to the orchestrator."""
+    """提供给编排器的已校验工具契约。"""
 
     name: str
     description: str

@@ -1,4 +1,4 @@
-"""Persisted lifecycle for resume skill extraction."""
+"""简历技能提取的持久化生命周期。"""
 
 from datetime import UTC, datetime
 from typing import TYPE_CHECKING
@@ -15,13 +15,12 @@ if TYPE_CHECKING:
 
 
 def utc_now() -> datetime:
-    """Return a timezone-aware timestamp for application records."""
-
+    """返回供应用记录使用的带时区时间戳。"""
     return datetime.now(UTC)
 
 
 class ResumeAnalysis(Base):
-    """Track LLM analysis independently from durable resume storage."""
+    """独立于简历持久化存储跟踪 LLM 分析。"""
 
     __tablename__ = "resume_analyses"
 

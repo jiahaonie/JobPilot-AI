@@ -1,12 +1,11 @@
-"""Citation construction."""
+"""引用构建。"""
 
 from app.rag.models import Citation
 from app.rag.retrieval import RetrievedChunk
 
 
 def build_citations(candidates: list[RetrievedChunk]) -> list[Citation]:
-    """Convert retrieved chunks into source references for an answer."""
-
+    """将检索分块转换为回答的来源引用。"""
     return [
         Citation(
             document_id=item.chunk.document_id,

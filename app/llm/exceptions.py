@@ -1,21 +1,25 @@
-"""LLM integration errors."""
+"""大语言模型集成异常。"""
 
 
 class LLMError(Exception):
-    """Base class for provider and output errors."""
+    """服务商调用与输出错误的基类。"""
 
 
 class LLMNotConfiguredError(LLMError):
-    """Raised when an LLM use case is called without a provider adapter."""
+    """未配置 LLM 服务商却调用相关用例时抛出。"""
 
 
 class StructuredOutputError(LLMError):
-    """Raised when a provider response cannot satisfy its schema."""
+    """服务商响应无法满足结构约束时抛出。"""
 
 
 class LLMTimeoutError(LLMError):
-    """Raised when the provider does not answer within the configured timeout."""
+    """服务商未在配置的超时时间内响应时抛出。"""
 
 
 class LLMRateLimitError(LLMError):
-    """Raised when the provider signals a rate limit, before a retry is exhausted."""
+    """服务商限流且重试耗尽时抛出。"""
+
+
+class LLMProviderError(LLMError):
+    """服务商返回 HTTP 或网络错误时抛出。"""
