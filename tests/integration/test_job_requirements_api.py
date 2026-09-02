@@ -71,6 +71,7 @@ def test_analyze_then_get_requirements_without_reanalyzing(
     response = client.get(f"/api/v1/jobs/{job_id}/requirements")
 
     assert analyze_response.status_code == 200
+    assert client.get(f"/api/v1/jobs/{job_id}").json()["analysis_status"] == "ready"
     assert response.status_code == 200
     body = response.json()
     assert body["job_title"] == "RAG Intern"
@@ -89,6 +90,9 @@ def test_job_analyze_returns_503_when_analysis_fails(
     response = client.post(f"/api/v1/jobs/{job_id}/analyze")
 
     assert response.status_code == 503
+    job = client.get(f"/api/v1/jobs/{job_id}").json()
+    assert job["analysis_status"] == "failed"
+    assert job["analysis_error"] == "fake provider returned invalid output"
 
 
 def test_job_requirements_returns_404_before_analysis(client) -> None:
@@ -113,7 +117,8 @@ def test_updating_analysis_fields_invalidates_stored_requirements(
     )
 
     assert update_response.status_code == 200
-    assert update_response.json()["status"] == "pending_analysis"
+    assert update_response.json()["status"] is None
+    assert update_response.json()["analysis_status"] == "pending"
     assert client.get(f"/api/v1/jobs/{job_id}/requirements").status_code == 404
 
 
@@ -124,9 +129,10 @@ def test_updating_unrelated_fields_keeps_stored_requirements(application, client
 
     update_response = client.patch(
         f"/api/v1/jobs/{job_id}",
-        json={"city": "Remote", "status": "applied"},
+        json={"city": "Remote"},
     )
 
     assert update_response.status_code == 200
-    assert update_response.json()["status"] == "applied"
+    assert update_response.json()["status"] is None
+    assert update_response.json()["analysis_status"] == "ready"
     assert client.get(f"/api/v1/jobs/{job_id}/requirements").status_code == 200

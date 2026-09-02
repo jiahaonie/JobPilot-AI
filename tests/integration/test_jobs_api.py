@@ -16,15 +16,23 @@ def test_job_crud_flow(client) -> None:
 
     assert create_response.status_code == 201
     created = create_response.json()
-    assert created["status"] == "pending_analysis"
+    assert created["status"] is None
+    assert created["resume_id"] is None
+    assert created["analysis_status"] == "pending"
 
     job_id = created["id"]
     update_response = client.patch(
         f"/api/v1/jobs/{job_id}",
-        json={"status": "applied"},
+        json={"city": "Remote"},
     )
     assert update_response.status_code == 200
-    assert update_response.json()["status"] == "applied"
+    assert update_response.json()["city"] == "Remote"
+
+    bypass_response = client.patch(
+        f"/api/v1/jobs/{job_id}",
+        json={"status": "applied"},
+    )
+    assert bypass_response.status_code == 422
 
     list_response = client.get("/api/v1/jobs")
     assert list_response.status_code == 200

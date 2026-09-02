@@ -6,6 +6,8 @@ from unittest.mock import Mock
 import pytest
 
 from app.core.exceptions import AnalysisPersistenceError
+from app.models.enums import JobAnalysisStatus
+from app.models.job_analysis import JobAnalysis
 from app.schemas.requirements import JobRequirement
 from app.services.analysis import JobAnalysisService
 
@@ -22,8 +24,10 @@ def make_service(result: JobRequirement) -> JobAnalysisService:
     service = JobAnalysisService(Mock(), FakeLLMClient(result))
     service.job_service = Mock()
     service.job_service.get.return_value = SimpleNamespace(
+        id=1,
         raw_text="Python and FastAPI experience are preferred.",
         job_title="RAG Intern",
+        analysis=JobAnalysis(status=JobAnalysisStatus.PENDING),
     )
     return service
 

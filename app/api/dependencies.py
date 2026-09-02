@@ -29,6 +29,7 @@ from app.services.requirements import JobRequirementService
 from app.services.resume import ResumeAnalysisService, ResumeService
 from app.services.resume_file import ResumeFileService
 from app.services.search import KnowledgeSearchService
+from app.services.study_plan import StudyPlanService
 
 
 def get_job_service(db: Session = Depends(get_db)) -> JobService:
@@ -87,6 +88,13 @@ def get_match_report_service(
 ) -> MatchReportService:
     """为单次请求构建匹配报告持久化服务。"""
     return MatchReportService(db)
+
+
+def get_study_plan_service(
+    db: Session = Depends(get_db),
+) -> StudyPlanService:
+    """为单次请求构建学习计划服务。"""
+    return StudyPlanService(db)
 
 
 def get_job_analysis_service(

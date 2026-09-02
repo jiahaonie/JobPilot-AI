@@ -2,6 +2,7 @@
 
 from collections.abc import Callable
 from dataclasses import dataclass
+from datetime import date
 from typing import Any
 
 from pydantic import BaseModel, Field, field_validator
@@ -38,10 +39,10 @@ class SearchLearningMaterialInput(BaseModel):
 
 
 class CreateStudyPlanInput(BaseModel):
-    """学习计划生成输入。"""
+    """基于一份不可变匹配报告创建学习计划。"""
 
-    job_id: int = Field(ge=1)
-    deadline: str | None = None
+    match_report_id: int = Field(ge=1)
+    deadline: date | None = None
 
 
 class UpdateApplicationStatusInput(BaseModel):

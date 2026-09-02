@@ -4,6 +4,7 @@ from sqlalchemy.orm import Session
 
 from app.agents.tools import (
     CompareResumeWithJobInput,
+    CreateStudyPlanInput,
     GetJobRequirementsInput,
     SearchLearningMaterialInput,
     ToolSpec,
@@ -11,8 +12,10 @@ from app.agents.tools import (
 from app.core.exceptions import JobRequirementNotFoundError
 from app.repositories.job_requirement import JobRequirementRepository
 from app.schemas.requirements import JobRequirement
+from app.schemas.study_plan import StudyPlanRead
 from app.services.matching import MatchService
 from app.services.search import KnowledgeSearchService
+from app.services.study_plan import StudyPlanService
 
 
 def build_real_tool_specs(
@@ -20,9 +23,10 @@ def build_real_tool_specs(
     session: Session,
     search_service: KnowledgeSearchService,
 ) -> tuple[ToolSpec, ...]:
-    """将三个模型可见工具绑定到真实仓库和服务。"""
+    """将四个模型可见工具绑定到真实仓库和服务。"""
     requirement_repository = JobRequirementRepository(session)
     match_service = MatchService(session)
+    study_plan_service = StudyPlanService(session)
 
     def get_job_requirements(arguments: GetJobRequirementsInput) -> dict:
         row = requirement_repository.get_by_job(arguments.job_id)
@@ -51,6 +55,13 @@ def build_real_tool_specs(
             max_distance=arguments.max_distance,
         ).model_dump(mode="json")
 
+    def create_study_plan(arguments: CreateStudyPlanInput) -> dict:
+        plan = study_plan_service.create(
+            match_report_id=arguments.match_report_id,
+            deadline=arguments.deadline,
+        )
+        return StudyPlanRead.model_validate(plan).model_dump(mode="json")
+
     return (
         ToolSpec(
             name="get_job_requirements",
@@ -69,5 +80,11 @@ def build_real_tool_specs(
             description="在本地知识库中语义检索学习材料。",
             input_model=SearchLearningMaterialInput,
             handler=search_learning_material,
+        ),
+        ToolSpec(
+            name="create_study_plan",
+            description="基于不可变匹配报告的优先技能缺口创建规则学习计划。",
+            input_model=CreateStudyPlanInput,
+            handler=create_study_plan,
         ),
     )

@@ -9,6 +9,8 @@ from app.api.routes.jobs import router as jobs_router
 from app.api.routes.knowledge import router as knowledge_router
 from app.api.routes.match_reports import router as match_reports_router
 from app.api.routes.resumes import router as resumes_router
+from app.api.routes.study_plans import router as study_plans_router
+from app.api.routes.study_plans import task_router as study_tasks_router
 
 api_router = APIRouter()
 api_router.include_router(agent_router)
@@ -18,3 +20,5 @@ api_router.include_router(jobs_router)
 api_router.include_router(knowledge_router)
 api_router.include_router(match_reports_router)
 api_router.include_router(resumes_router)
+api_router.include_router(study_plans_router)
+api_router.include_router(study_tasks_router)

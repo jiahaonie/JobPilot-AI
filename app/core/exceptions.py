@@ -38,6 +38,48 @@ class ResumeAnalysisNotReadyError(DomainError):
     status_code = 409
 
 
+class JobPreparationNotReadyError(DomainError):
+    """岗位或绑定简历尚不满足开始投递准备的条件。"""
+
+    status_code = 409
+
+
+class InvalidJobStatusTransitionError(DomainError):
+    """岗位投递状态不符合受控状态机时抛出。"""
+
+    status_code = 409
+
+
+class ResumeInUseError(DomainError):
+    """简历仍被岗位绑定、不能直接删除时抛出。"""
+
+    status_code = 409
+
+
+class StudyPlanConflictError(DomainError):
+    """学习计划因业务前置条件或唯一性冲突而无法创建。"""
+
+    status_code = 409
+
+
+class InvalidStudyTaskTransitionError(DomainError):
+    """学习任务状态不符合受控状态机时抛出。"""
+
+    status_code = 409
+
+
+class StudyPlanValidationError(DomainError):
+    """学习计划输入虽格式正确但不满足业务日期约束。"""
+
+    status_code = 422
+
+
+class StudyPlanPersistenceError(DomainError):
+    """学习计划或任务无法完整持久化时抛出。"""
+
+    status_code = 500
+
+
 class UnsupportedFileTypeError(DomainError):
     """上传文件格式不在支持范围内时抛出。"""
 

@@ -2,12 +2,28 @@
 
 from sqlalchemy.orm import Session
 
-from app.core.exceptions import ResourceNotFoundError
-from app.models.enums import JobStatus
+from app.core.exceptions import (
+    InvalidJobStatusTransitionError,
+    JobPreparationNotReadyError,
+    ResourceNotFoundError,
+)
+from app.models.enums import JobAnalysisStatus, JobStatus, ResumeAnalysisStatus
 from app.models.job import Job
+from app.models.job_analysis import JobAnalysis
+from app.models.job_resume import JobResume
 from app.repositories.job import JobRepository
 from app.repositories.job_requirement import JobRequirementRepository
+from app.repositories.job_resume import JobResumeRepository
+from app.repositories.resume import ResumeRepository
 from app.schemas.job import JobCreate, JobUpdate
+
+_ALLOWED_STATUS_TRANSITIONS: dict[JobStatus, set[JobStatus]] = {
+    JobStatus.PREPARING: {JobStatus.APPLIED, JobStatus.CLOSED},
+    JobStatus.APPLIED: {JobStatus.CONTACTED, JobStatus.CLOSED},
+    JobStatus.CONTACTED: {JobStatus.INTERVIEW, JobStatus.CLOSED},
+    JobStatus.INTERVIEW: {JobStatus.CLOSED},
+    JobStatus.CLOSED: set(),
+}
 
 
 class JobService:
@@ -17,10 +33,16 @@ class JobService:
         self.session = session
         self.repository = JobRepository(session)
         self.requirement_repository = JobRequirementRepository(session)
+        self.job_resume_repository = JobResumeRepository(session)
+        self.resume_repository = ResumeRepository(session)
 
     def create(self, payload: JobCreate) -> Job:
         """保存岗位描述。"""
-        job = Job(**payload.model_dump())
+        job = Job(
+            **payload.model_dump(),
+            status=None,
+            analysis=JobAnalysis(status=JobAnalysisStatus.PENDING),
+        )
         self.repository.add(job)
         self.session.commit()
         self.session.refresh(job)
@@ -49,7 +71,94 @@ class JobService:
             setattr(job, field, value)
         if analysis_changed:
             self.requirement_repository.delete_by_job(job_id)
-            job.status = JobStatus.PENDING_ANALYSIS
+            analysis = job.analysis
+            if analysis is None:
+                analysis = JobAnalysis(job_id=job.id)
+                job.analysis = analysis
+            analysis.status = JobAnalysisStatus.PENDING
+            analysis.error_message = None
+            analysis.analyzed_at = None
+        self.session.commit()
+        self.session.refresh(job)
+        return job
+
+    def bind_resume(self, job_id: int, resume_id: int) -> Job:
+        """在投递开始前为岗位选择唯一简历。"""
+        job = self.get(job_id)
+        resume = self.resume_repository.get(resume_id)
+        if resume is None:
+            raise ResourceNotFoundError(f"Resume {resume_id} was not found")
+
+        binding = self.job_resume_repository.get_by_job(job_id)
+        if binding is not None and binding.resume_id == resume_id:
+            return job
+        if job.status is not None:
+            raise InvalidJobStatusTransitionError(
+                f"Job {job_id} resume cannot change after preparation has started"
+            )
+        if binding is None:
+            self.job_resume_repository.add(JobResume(job_id=job_id, resume_id=resume_id))
+        else:
+            binding.resume_id = resume_id
+        self.session.commit()
+        self.session.expire(job, ["resume_binding"])
+        return job
+
+    def unbind_resume(self, job_id: int) -> None:
+        """在投递开始前解除岗位与简历的绑定。"""
+        job = self.get(job_id)
+        binding = self.job_resume_repository.get_by_job(job_id)
+        if binding is None:
+            return
+        if job.status is not None:
+            raise InvalidJobStatusTransitionError(
+                f"Job {job_id} resume cannot be unbound after preparation has started"
+            )
+        self.job_resume_repository.delete(binding)
+        self.session.commit()
+
+    def prepare(self, job_id: int) -> Job:
+        """在岗位和绑定简历均分析完成后开始投递准备。"""
+        job = self.get(job_id)
+        if job.status is not None:
+            if job.status is JobStatus.PREPARING:
+                return job
+            raise InvalidJobStatusTransitionError(f"Job {job_id} preparation has already started")
+        if job.analysis_status is not JobAnalysisStatus.READY:
+            raise JobPreparationNotReadyError(f"Job {job_id} analysis is {job.analysis_status}")
+
+        binding = self.job_resume_repository.get_by_job(job_id)
+        if binding is None:
+            raise JobPreparationNotReadyError(f"Job {job_id} has no bound resume")
+        resume = self.resume_repository.get(binding.resume_id)
+        if resume is None:
+            raise ResourceNotFoundError(f"Resume {binding.resume_id} was not found")
+        if resume.analysis_status is not ResumeAnalysisStatus.READY:
+            raise JobPreparationNotReadyError(
+                f"Resume {resume.id} analysis is {resume.analysis_status}"
+            )
+
+        job.status = JobStatus.PREPARING
+        self.session.commit()
+        self.session.refresh(job)
+        return job
+
+    def update_status(self, job_id: int, target: JobStatus) -> Job:
+        """按照受控状态机推进岗位投递阶段。"""
+        job = self.get(job_id)
+        current = job.status
+        if current is None:
+            raise InvalidJobStatusTransitionError(
+                f"Job {job_id} must start preparation before status updates"
+            )
+        if current is target:
+            return job
+        if target not in _ALLOWED_STATUS_TRANSITIONS[current]:
+            raise InvalidJobStatusTransitionError(
+                f"Job status cannot change from {current} to {target}"
+            )
+
+        job.status = target
         self.session.commit()
         self.session.refresh(job)
         return job

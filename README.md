@@ -42,6 +42,7 @@ JobPilot AI 是一个面向岗位分析与学习知识库 Agent 的分层 FastAP
 - LLM 结构化 JD 解析：将原始岗位描述提取为技能、学历、职责和原文证据（DeepSeek，需配置 API Key）
 - 简历管理：保存文本或上传 TXT/Markdown/电子 PDF，再独立触发 LLM 技能提取
 - 简历与岗位匹配：输出技能覆盖分、已满足 / 缺失技能及原文证据，并可保存历史快照
+- 规则学习计划：基于不可变匹配报告生成有序任务，支持进度计算和受控状态更新
 - 本地知识库：TXT/Markdown 入库、Chroma 语义 Top-K 检索和余弦距离过滤
 - Retrieval Evaluation：离线计算 Recall@K 与 MRR
 - 带引用问答：无检索证据时拒答，并校验 `cited_chunk_ids`
@@ -59,6 +60,10 @@ JobPilot AI 是一个面向岗位分析与学习知识库 Agent 的分层 FastAP
     POST /api/v1/jobs/{id}/match-reports # 匹配并保存历史报告
     GET  /api/v1/match-reports/{id}      # 读取历史报告
     GET  /api/v1/match-reports           # 筛选历史报告
+    POST /api/v1/study-plans             # 基于匹配报告创建规则学习计划
+    GET  /api/v1/study-plans/{id}        # 查询计划、进度和有序任务
+    GET  /api/v1/study-plans             # 按岗位或简历筛选计划
+    PATCH /api/v1/study-tasks/{id}       # 更新任务状态
     POST /api/v1/knowledge/documents  # 上传知识文档
     POST /api/v1/knowledge/search     # 语义检索
     POST /api/v1/ask                  # 带引用问答
@@ -73,11 +78,12 @@ JobPilot AI 是一个面向岗位分析与学习知识库 Agent 的分层 FastAP
     }
 
 `distance` 是 Chroma cosine distance，越小越相关；超过 `max_distance`
-的结果不会进入回答上下文。Agent 当前只注册以下 3 个真实工具：
+的结果不会进入回答上下文。Agent 当前只注册以下 4 个真实工具：
 
 - `get_job_requirements`
 - `compare_resume_with_job`
 - `search_learning_material`
+- `create_study_plan`
 
 运行 Retrieval Evaluation：
 

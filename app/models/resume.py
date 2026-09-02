@@ -10,6 +10,7 @@ from app.models.base import Base
 from app.models.enums import ResumeAnalysisStatus
 
 if TYPE_CHECKING:
+    from app.models.job_resume import JobResume
     from app.models.resume_analysis import ResumeAnalysis
 
 
@@ -36,6 +37,10 @@ class Resume(Base):
         back_populates="resume",
         cascade="all, delete-orphan",
         uselist=False,
+    )
+    job_bindings: Mapped[list["JobResume"]] = relationship(
+        back_populates="resume",
+        passive_deletes=True,
     )
 
     @property

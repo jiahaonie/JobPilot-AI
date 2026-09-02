@@ -10,7 +10,7 @@ from app.api.dependencies import (
     get_match_report_service,
     get_match_service,
 )
-from app.schemas.job import JobCreate, JobRead, JobUpdate
+from app.schemas.job import JobCreate, JobRead, JobResumeBind, JobStatusUpdate, JobUpdate
 from app.schemas.match_report import MatchReportRead
 from app.schemas.matching import MatchReport
 from app.schemas.requirements import JobRequirement
@@ -74,6 +74,44 @@ def delete_job(
 ) -> None:
     """删除一个已保存岗位。"""
     service.delete(job_id)
+
+
+@router.put("/{job_id}/resume", response_model=JobRead)
+def bind_job_resume(
+    job_id: int,
+    payload: JobResumeBind,
+    service: JobService = Depends(get_job_service),
+) -> JobRead:
+    """在投递开始前为岗位选择唯一简历。"""
+    return service.bind_resume(job_id, payload.resume_id)
+
+
+@router.delete("/{job_id}/resume", status_code=status.HTTP_204_NO_CONTENT)
+def unbind_job_resume(
+    job_id: int,
+    service: JobService = Depends(get_job_service),
+) -> None:
+    """在投递开始前解除岗位的简历绑定。"""
+    service.unbind_resume(job_id)
+
+
+@router.post("/{job_id}/prepare", response_model=JobRead)
+def prepare_job_application(
+    job_id: int,
+    service: JobService = Depends(get_job_service),
+) -> JobRead:
+    """在岗位和简历分析完成后开始投递准备。"""
+    return service.prepare(job_id)
+
+
+@router.patch("/{job_id}/status", response_model=JobRead)
+def update_job_status(
+    job_id: int,
+    payload: JobStatusUpdate,
+    service: JobService = Depends(get_job_service),
+) -> JobRead:
+    """按照受控状态机推进岗位投递阶段。"""
+    return service.update_status(job_id, payload.status)
 
 
 @router.post("/{job_id}/analyze", response_model=JobRequirement)

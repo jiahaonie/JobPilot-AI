@@ -68,11 +68,15 @@ class Database:
         """仅为明确隔离的测试数据库创建表。"""
         from app.models import (  # noqa: F401
             Job,  # noqa: F401
+            JobAnalysis,
             JobRequirementRow,
+            JobResume,
             KnowledgeDocument,
             MatchReportRow,
             Resume,
             ResumeAnalysis,
+            StudyPlan,
+            StudyTask,
         )
         from app.models.base import Base
 

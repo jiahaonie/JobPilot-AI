@@ -4,13 +4,14 @@ from datetime import UTC, datetime
 
 from sqlalchemy.orm import Session
 
-from app.core.exceptions import LLMAnalysisError, ResourceNotFoundError
+from app.core.exceptions import LLMAnalysisError, ResourceNotFoundError, ResumeInUseError
 from app.llm.client import StructuredLLMClient
 from app.llm.exceptions import LLMError
 from app.llm.prompts import build_resume_skill_prompt
 from app.models.enums import ResumeAnalysisStatus
 from app.models.resume import Resume
 from app.models.resume_analysis import ResumeAnalysis
+from app.repositories.job_resume import JobResumeRepository
 from app.repositories.resume import ResumeRepository
 from app.schemas.resume import ResumeCreate, ResumeSkill
 
@@ -24,6 +25,7 @@ class ResumeService:
     ) -> None:
         self.session = session
         self.repository = ResumeRepository(session)
+        self.job_resume_repository = JobResumeRepository(session)
 
     def create(self, payload: ResumeCreate) -> Resume:
         """先保存原始文本，并将技能分析保持为待处理状态。"""
@@ -52,6 +54,8 @@ class ResumeService:
     def delete(self, resume_id: int) -> None:
         """删除一份已保存的简历。"""
         resume = self.get(resume_id)
+        if self.job_resume_repository.get_by_resume(resume_id):
+            raise ResumeInUseError(f"Resume {resume_id} is still bound to at least one job")
         self.repository.delete(resume)
         self.session.commit()
 

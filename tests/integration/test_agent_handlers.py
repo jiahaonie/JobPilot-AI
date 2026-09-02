@@ -1,4 +1,6 @@
-"""三个真实 Agent 工具处理器的集成测试。"""
+"""四个真实 Agent 工具处理器的集成测试。"""
+
+from datetime import UTC, datetime
 
 from app.agents.handlers import build_real_tool_specs
 from app.agents.orchestrator import ToolRegistry
@@ -6,6 +8,7 @@ from app.core.config import Settings
 from app.core.database import Database
 from app.models.job import Job
 from app.models.job_requirement import JobRequirementRow
+from app.models.match_report import MatchReportRow
 from app.models.resume import Resume
 from app.schemas.knowledge import KnowledgeSearchResponse, KnowledgeSearchResult
 
@@ -28,7 +31,7 @@ class StubSearchService:
         )
 
 
-def test_three_agent_handlers_call_real_persistence_and_services(tmp_path) -> None:
+def test_four_agent_handlers_call_real_persistence_and_services(tmp_path) -> None:
     database = Database(
         Settings(
             environment="test",
@@ -60,7 +63,30 @@ def test_three_agent_handlers_call_real_persistence_and_services(tmp_path) -> No
                     evidence=["需要 FastAPI 和 RAG。"],
                 )
             )
+            session.add(
+                MatchReportRow(
+                    job_id=job.id,
+                    resume_id=resume.id,
+                    skill_coverage_score=50.0,
+                    required_score=50.0,
+                    preferred_score=None,
+                    score_disclaimer="仅表示技能覆盖程度。",
+                    matched_skills=["FastAPI"],
+                    bonus_skills=[],
+                    missing_skills=[{"skill": "RAG", "evidence": "需要 FastAPI 和 RAG。"}],
+                    priority_skills=[
+                        {"skill": "RAG", "evidence": "需要 FastAPI 和 RAG。"}
+                    ],
+                    required_skills_snapshot=["FastAPI", "RAG"],
+                    preferred_skills_snapshot=[],
+                    resume_skills_snapshot=["FastAPI"],
+                    job_requirement_updated_at=datetime.now(UTC),
+                    resume_analyzed_at=datetime.now(UTC),
+                    scoring_version="skill-coverage-v1",
+                )
+            )
             session.commit()
+            report = session.query(MatchReportRow).one()
 
             registry = ToolRegistry(
                 build_real_tool_specs(
@@ -78,10 +104,17 @@ def test_three_agent_handlers_call_real_persistence_and_services(tmp_path) -> No
                 "search_learning_material",
                 {"query": "RAG 如何约束回答", "top_k": 3},
             )
+            plan = registry.execute(
+                "create_study_plan",
+                {"match_report_id": report.id},
+            )
 
             assert requirements["required_skills"] == ["FastAPI", "RAG"]
             assert comparison["matched_skills"] == ["FastAPI"]
             assert comparison["priority_skills"][0]["skill"] == "RAG"
             assert search["results"][0]["chunk_id"] == "document:9:chunk:0"
+            assert plan["match_report_id"] == report.id
+            assert plan["task_count"] == 3
+            assert plan["generation_method"] == "rule_v1"
     finally:
         database.dispose()
