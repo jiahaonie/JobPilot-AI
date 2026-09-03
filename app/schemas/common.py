@@ -8,9 +8,3 @@ class HealthResponse(BaseModel):
 
     status: str
     service: str
-
-
-class MessageResponse(BaseModel):
-    """数据变更端点使用的简单消息响应。"""
-
-    message: str

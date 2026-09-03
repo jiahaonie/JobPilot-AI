@@ -3,11 +3,9 @@
 from app.repositories.job import JobRepository
 from app.repositories.job_resume import JobResumeRepository
 from app.repositories.study_plan import StudyPlanRepository
-from app.repositories.study_task import StudyTaskRepository
 
 __all__ = [
     "JobRepository",
     "JobResumeRepository",
     "StudyPlanRepository",
-    "StudyTaskRepository",
 ]

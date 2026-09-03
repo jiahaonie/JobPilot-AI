@@ -8,7 +8,7 @@ JobPilot AI 是一个面向岗位分析与学习知识库 Agent 的分层 FastAP
 - services：负责业务用例和业务流程。
 - repositories：负责数据库访问。
 - models 与 schemas：分别负责数据库模型和 API 数据契约。
-- llm、rag、agents 与 mcp_server：作为后续阶段可独立替换和测试的集成边界。
+- llm、rag 与 agents：作为可独立替换和测试的集成边界。
 
 ## 本地运行
 
@@ -100,7 +100,3 @@ JobPilot AI 是一个面向岗位分析与学习知识库 Agent 的分层 FastAP
 本地真实 Chroma 的写入、查询和删除已有集成测试；测试使用确定性向量，避免下载模型。
 真实 FastEmbed 模型下载和 DeepSeek 网络调用仍需在本机配置网络与 `LLM_API_KEY`
 后做端到端 smoke，离线 Fake 测试不代表第三方服务已联通。
-
-MCP 目前是可选能力；开始实现 MCP 集成时，可以安装对应依赖：
-
-    uv sync --cache-dir .uv-cache --extra mcp

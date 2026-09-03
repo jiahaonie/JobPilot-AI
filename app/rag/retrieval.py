@@ -1,7 +1,6 @@
 """检索端口与无依赖词法基线。"""
 
 import re
-from typing import Protocol
 
 from pydantic import BaseModel
 
@@ -13,19 +12,6 @@ class RetrievedChunk(BaseModel):
 
     chunk: DocumentChunk
     score: float
-
-
-class Retriever(Protocol):
-    """向量、混合或词法检索实现的端口。"""
-
-    def retrieve(
-        self,
-        chunks: list[DocumentChunk],
-        query: str,
-        *,
-        top_k: int = 5,
-    ) -> list[RetrievedChunk]:
-        """返回最相关的分块。"""
 
 
 class LexicalRetriever:

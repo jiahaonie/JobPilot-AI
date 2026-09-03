@@ -52,14 +52,3 @@ class ToolRegistry:
             raise
         except Exception as exc:
             raise ToolExecutionError(f"Tool {name!r} failed") from exc
-
-
-class AgentOrchestrator:
-    """面向应用层的工具注册表门面。"""
-
-    def __init__(self, registry: ToolRegistry) -> None:
-        self.registry = registry
-
-    def execute_tool(self, name: str, payload: object) -> object:
-        """通过已校验的注册表边界执行工具。"""
-        return self.registry.execute(name, payload)

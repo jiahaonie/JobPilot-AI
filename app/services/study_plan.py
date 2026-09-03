@@ -20,7 +20,6 @@ from app.models.study_plan import StudyPlan
 from app.models.study_task import StudyTask
 from app.repositories.match_report import MatchReportRepository
 from app.repositories.study_plan import StudyPlanRepository
-from app.repositories.study_task import StudyTaskRepository
 from app.schemas.matching import SkillGap
 
 GENERATION_METHOD = "rule_v1"
@@ -139,7 +138,6 @@ class StudyPlanService:
         self.datetime_provider = datetime_provider or (lambda: datetime.now(UTC))
         self.match_report_repository = MatchReportRepository(session)
         self.plan_repository = StudyPlanRepository(session)
-        self.task_repository = StudyTaskRepository(session)
 
     def create(
         self,
@@ -233,7 +231,7 @@ class StudyPlanService:
         target: StudyTaskStatus,
     ) -> StudyTask:
         """按照受控状态机更新任务并维护完成时间。"""
-        task = self.task_repository.get(task_id)
+        task = self.session.get(StudyTask, task_id)
         if task is None:
             raise ResourceNotFoundError(f"Study task {task_id} was not found")
         if task.status is target:
