@@ -23,8 +23,28 @@ class FakeAnalysisLLM:
         return response_model.model_validate(
             {
                 "job_title": "RAG Intern",
-                "required_skills": ["Python", "FastAPI", "Vector DB"],
-                "preferred_skills": ["NLP"],
+                "extraction_version": "job-requirements-v2",
+                "skill_requirements": [
+                    {
+                        "label": "核心技能",
+                        "importance": "required",
+                        "match_mode": "all",
+                        "options": ["Python", "FastAPI", "Vector DB"],
+                        "evidence": (
+                            "Proficient in Python and FastAPI. Knowledge of Vector DB."
+                        ),
+                    },
+                    {
+                        "label": "NLP",
+                        "importance": "preferred",
+                        "match_mode": "all",
+                        "options": ["NLP"],
+                        "evidence": "NLP is preferred.",
+                    },
+                ],
+                "unscored_requirements": [],
+                "required_skills": [],
+                "preferred_skills": [],
                 "education": None,
                 "internship_duration": None,
                 "responsibilities": [],
@@ -50,7 +70,10 @@ def _create_job(client: TestClient) -> int:
         json={
             "company_name": "Example Co",
             "job_title": "RAG Intern",
-            "raw_text": "Proficient in Python and FastAPI. Knowledge of Vector DB.",
+            "raw_text": (
+                "Proficient in Python and FastAPI. Knowledge of Vector DB. "
+                "NLP is preferred."
+            ),
         },
     )
     assert response.status_code == 201

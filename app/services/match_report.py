@@ -2,14 +2,14 @@
 
 from sqlalchemy.orm import Session
 
-from app.core.exceptions import ResourceNotFoundError
+from app.core.exceptions import LegacyJobRequirementError, ResourceNotFoundError
 from app.models.match_report import MatchReportRow
 from app.repositories.job_requirement import JobRequirementRepository
 from app.repositories.match_report import MatchReportRepository
 from app.repositories.resume import ResumeRepository
 from app.services.matching import MatchService
 
-SCORING_VERSION = "skill-coverage-v1"
+SCORING_VERSION = "skill-coverage-v2"
 
 
 class MatchReportService:
@@ -24,8 +24,12 @@ class MatchReportService:
 
     def create(self, *, job_id: int, resume_id: int) -> MatchReportRow:
         """计算匹配结果，并保存后续解释所需的全部输入。"""
-        result = self.match_service.match(job_id=job_id, resume_id=resume_id)
         requirement = self.requirement_repository.get_by_job(job_id)
+        if requirement is not None and requirement.extraction_version != "job-requirements-v2":
+            raise LegacyJobRequirementError(
+                "该岗位仍使用旧版分析结果，请重新分析岗位后再创建匹配报告"
+            )
+        result = self.match_service.match(job_id=job_id, resume_id=resume_id)
         resume = self.resume_repository.get(resume_id)
         if requirement is None or resume is None:
             raise RuntimeError("matching sources disappeared during report creation")
@@ -41,6 +45,11 @@ class MatchReportService:
             bonus_skills=list(result.bonus_skills),
             missing_skills=[gap.model_dump(mode="json") for gap in result.missing_skills],
             priority_skills=[gap.model_dump(mode="json") for gap in result.priority_skills],
+            requirement_matches=(
+                [match.model_dump(mode="json") for match in result.requirement_matches]
+                if result.requirement_matches is not None
+                else None
+            ),
             required_skills_snapshot=list(requirement.required_skills),
             preferred_skills_snapshot=list(requirement.preferred_skills),
             resume_skills_snapshot=list(resume.skills),

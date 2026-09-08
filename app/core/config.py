@@ -22,6 +22,8 @@ class Settings(BaseSettings):
     llm_base_url: str = "https://api.deepseek.com/v1"
     llm_timeout_seconds: float = 30.0
     llm_max_retries: int = 2
+    llm_max_tokens: int = 4096
+    llm_thinking_enabled: bool = False
 
     rag_chroma_path: str = "./data/chroma"
     rag_collection_name: str = "jobpilot_knowledge"

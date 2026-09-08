@@ -16,6 +16,7 @@ from app.models.job_requirement import JobRequirementRow
 from app.repositories.job_requirement import JobRequirementRepository
 from app.schemas.requirements import JobRequirement
 from app.services.job import JobService
+from app.services.skill_normalization import SkillNormalizer
 
 logger = logging.getLogger(__name__)
 
@@ -60,7 +61,11 @@ class JobAnalysisService:
         except Exception as exc:
             self._record_failure(job_id, "Unexpected analysis failure")
             raise LLMAnalysisError("Job analysis failed unexpectedly") from exc
-        result.evidence = _grounded_evidence(result.evidence, job.raw_text)
+        try:
+            result = _prepare_v2_result(result, job.raw_text)
+        except ValueError as exc:
+            self._record_failure(job_id, str(exc))
+            raise LLMAnalysisError(f"Job analysis produced invalid requirements: {exc}") from exc
         self._persist(job, result)
         return result
 
@@ -69,6 +74,11 @@ class JobAnalysisService:
         row = JobRequirementRow(
             job_id=job.id,
             job_title=result.job_title,
+            extraction_version=result.extraction_version,
+            skill_requirements=[item.model_dump(mode="json") for item in result.skill_requirements],
+            unscored_requirements=[
+                item.model_dump(mode="json") for item in result.unscored_requirements
+            ],
             required_skills=result.required_skills,
             preferred_skills=result.preferred_skills,
             education=result.education,
@@ -117,10 +127,60 @@ class JobAnalysisService:
 def _grounded_evidence(evidence: list[str], raw_text: str) -> list[str]:
     """仅保留可在原始 JD 中定位的证据片段。"""
     normalized_raw_text = " ".join(raw_text.casefold().split())
-    grounded = [
+    return [
         excerpt
         for excerpt in evidence
         if (normalized_excerpt := " ".join(excerpt.casefold().split()))
         and normalized_excerpt in normalized_raw_text
     ]
-    return grounded or [raw_text]
+
+
+_FORBIDDEN_OPTION_MARKERS = ("\n", "\r", "/", "，", ",", "；", ";", "。", "！", "？")
+
+
+def _prepare_v2_result(result: JobRequirement, raw_text: str) -> JobRequirement:
+    """校验 V2 原子技能和证据，并生成只用于兼容的扁平技能字段。"""
+    if result.extraction_version != "job-requirements-v2":
+        raise ValueError("extraction_version must be job-requirements-v2")
+
+    normalizer = SkillNormalizer()
+    required: list[str] = []
+    preferred: list[str] = []
+    all_evidence: list[str] = []
+    for requirement in result.skill_requirements:
+        if not _excerpt_in_text(requirement.evidence, raw_text):
+            raise ValueError(
+                "skill requirement evidence is not present in JD: "
+                f"{requirement.label}"
+            )
+        seen: set[str] = set()
+        for option in requirement.options:
+            if len(option) > 80 or any(
+                marker in option for marker in _FORBIDDEN_OPTION_MARKERS
+            ):
+                raise ValueError(f"skill option is not atomic: {option}")
+            if not normalizer.contains_evidence(requirement.evidence, option):
+                raise ValueError(f"skill option is not supported by evidence: {option}")
+            canonical = normalizer.canonical_name(option)
+            if not canonical or canonical in seen:
+                raise ValueError(f"skill option is empty or duplicated: {option}")
+            seen.add(canonical)
+        target = required if requirement.importance == "required" else preferred
+        target.extend(requirement.options)
+        all_evidence.append(requirement.evidence)
+
+    for requirement in result.unscored_requirements:
+        if not _excerpt_in_text(requirement.evidence, raw_text):
+            raise ValueError("unscored requirement evidence is not present in JD")
+        all_evidence.append(requirement.evidence)
+
+    result.required_skills = list(dict.fromkeys(required))
+    result.preferred_skills = list(dict.fromkeys(preferred))
+    result.evidence = list(dict.fromkeys(_grounded_evidence(all_evidence, raw_text)))
+    return result
+
+
+def _excerpt_in_text(excerpt: str, raw_text: str) -> bool:
+    normalized_excerpt = " ".join(excerpt.casefold().split())
+    normalized_raw = " ".join(raw_text.casefold().split())
+    return bool(normalized_excerpt) and normalized_excerpt in normalized_raw

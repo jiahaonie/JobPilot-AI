@@ -23,12 +23,30 @@ class FakeLLMClient:
         return response_model.model_validate(
             {
                 "job_title": "RAG Intern",
-                "required_skills": ["Python"],
-                "preferred_skills": ["FastAPI"],
+                "extraction_version": "job-requirements-v2",
+                "skill_requirements": [
+                    {
+                        "label": "Python",
+                        "importance": "required",
+                        "match_mode": "all",
+                        "options": ["Python"],
+                        "evidence": "Build a Python retrieval service with FastAPI",
+                    },
+                    {
+                        "label": "FastAPI",
+                        "importance": "preferred",
+                        "match_mode": "all",
+                        "options": ["FastAPI"],
+                        "evidence": "Build a Python retrieval service with FastAPI",
+                    },
+                ],
+                "unscored_requirements": [],
+                "required_skills": [],
+                "preferred_skills": [],
                 "education": None,
                 "internship_duration": None,
                 "responsibilities": ["Build retrieval service"],
-                "evidence": ["Build a retrieval service"],
+                "evidence": [],
             }
         )
 
@@ -52,7 +70,7 @@ def create_job(client: TestClient) -> int:
             "company_name": "Example Co",
             "job_title": "RAG Intern",
             "city": "Singapore",
-            "raw_text": "Build a retrieval service.",
+            "raw_text": "Build a Python retrieval service with FastAPI.",
         },
     )
     assert response.status_code == 201
@@ -76,7 +94,9 @@ def test_analyze_then_get_requirements_without_reanalyzing(
     body = response.json()
     assert body["job_title"] == "RAG Intern"
     assert body["required_skills"] == ["Python"]
-    assert body["evidence"] == ["Build a retrieval service"]
+    assert body["evidence"] == ["Build a Python retrieval service with FastAPI"]
+    assert body["extraction_version"] == "job-requirements-v2"
+    assert body["skill_requirements"][0]["options"] == ["Python"]
     assert fake_client.calls == 1
 
 

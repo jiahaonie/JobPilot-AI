@@ -17,4 +17,10 @@ def parse_structured_output[ModelT: BaseModel](
     try:
         return response_model.model_validate(payload)
     except ValidationError as exc:
-        raise StructuredOutputError(f"LLM output did not match {response_model.__name__}") from exc
+        details = "; ".join(
+            f"{'.'.join(str(part) for part in error['loc'])}: {error['type']}"
+            for error in exc.errors(include_url=False, include_input=False)
+        )
+        raise StructuredOutputError(
+            f"LLM output did not match {response_model.__name__}: {details}"
+        ) from exc

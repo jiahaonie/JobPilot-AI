@@ -7,6 +7,41 @@ import { EmptyState, ErrorState, InlineMessage, LoadingState } from '../componen
 import { SkillTags } from '../components/ui/StatusBadge'
 import { useAsyncResource } from '../hooks/useAsyncResource'
 import { formatDate, scoreText } from '../utils/format'
+import type { RequirementMatch } from '../types/api'
+
+const requirementStatusLabel = {
+  covered: '已覆盖',
+  partial: '部分覆盖',
+  missing: '尚未覆盖',
+} as const
+
+function RequirementMatches({ matches }: { matches: RequirementMatch[] }) {
+  return (
+    <section className="panel">
+      <div className="section-heading"><div><p className="eyebrow">V2 要求级解释</p><h2>岗位技能组覆盖情况</h2></div></div>
+      <div className="requirement-list">
+        {matches.map((match, matchIndex) => (
+          <article className={`requirement-card ${match.status}`} key={`${match.label}-${matchIndex}`}>
+            <div className="requirement-heading">
+              <div><strong>{match.label}</strong><p>{match.importance === 'required' ? '必需能力' : '加分能力'} · {match.match_mode === 'any' ? '任意一项满足即可' : '需要全部满足'}</p></div>
+              <span className={`status-badge ${match.status}`}>{requirementStatusLabel[match.status]}</span>
+            </div>
+            <p className="evidence"><strong>JD 证据：</strong>{match.job_evidence}</p>
+            <div className="option-list">
+              {match.options.map((option, optionIndex) => (
+                <div key={`${option.option}-${optionIndex}`}>
+                  <strong>{option.option}</strong>
+                  {option.matched_resume_skill ? <span className="matched-option">命中：{option.matched_resume_skill}</span> : <span className="missing-option">未命中</span>}
+                  {option.resume_evidence && <p>简历证据：{option.resume_evidence}</p>}
+                </div>
+              ))}
+            </div>
+          </article>
+        ))}
+      </div>
+    </section>
+  )
+}
 
 export function MatchReportsPage() {
   const loader = useCallback(() => matchReportsApi.list(), [])
@@ -55,7 +90,9 @@ export function MatchReportDetailPage({ reportId }: { reportId: number }) {
       <div className="page-heading"><div><p className="eyebrow">报告 #{report.id} · {report.scoring_version}</p><h1>技能匹配解释</h1><p>生成于 {formatDate(report.created_at)}</p></div><div className="score-hero"><strong>{scoreText(report.skill_coverage_score)}</strong><span>技能覆盖分</span></div></div>
       {error && <InlineMessage kind="error">{error}</InlineMessage>}
       <InlineMessage kind="info">{report.score_disclaimer}</InlineMessage>
+      {!report.requirement_matches && <InlineMessage kind="info">这是旧版匹配算法生成的历史报告，仅保留原始结果，不提供 V2 要求级解释。</InlineMessage>}
       <section className="score-grid"><article><span>必需技能</span><strong>{scoreText(report.required_score)}</strong></article><article><span>加分技能</span><strong>{scoreText(report.preferred_score)}</strong></article><article><span>岗位 / 简历</span><strong>#{report.job_id} / #{report.resume_id}</strong></article></section>
+      {report.requirement_matches && <RequirementMatches matches={report.requirement_matches} />}
       <div className="two-column">
         <section className="panel"><p className="eyebrow">已经覆盖</p><h2>匹配与加分技能</h2><h3>匹配技能</h3><SkillTags skills={report.matched_skills} /><h3>额外覆盖</h3><SkillTags skills={report.bonus_skills} /></section>
         <section className="panel"><p className="eyebrow">需要补齐</p><h2>优先学习技能</h2>{report.priority_skills.length ? <div className="gap-list">{report.priority_skills.map((gap) => <article key={gap.skill}><strong>{gap.skill}</strong><p>{gap.evidence || '没有对应的 JD 原文证据'}</p></article>)}</div> : <p className="muted">没有优先技能缺口。</p>}</section>

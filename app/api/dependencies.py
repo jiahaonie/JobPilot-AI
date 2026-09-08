@@ -2,7 +2,7 @@
 
 from functools import lru_cache
 
-from fastapi import Depends
+from fastapi import Depends, Request
 from sqlalchemy.orm import Session
 
 from app.agents.handlers import build_real_tool_specs
@@ -37,10 +37,8 @@ def get_job_service(db: Session = Depends(get_db)) -> JobService:
     return JobService(db)
 
 
-def get_llm_client(
-    settings: Settings = Depends(get_settings),
-) -> StructuredLLMClient:
-    """构建已配置的 LLM 客户端，未配置时返回明确的不可用占位实现。"""
+def build_llm_client(settings: Settings) -> StructuredLLMClient:
+    """为一个应用生命周期构建 LLM 客户端。"""
     if not settings.llm_api_key:
         return UnavailableLLMClient()
     return DeepSeekStructuredClient(
@@ -49,7 +47,14 @@ def get_llm_client(
         model=settings.llm_model,
         timeout_seconds=settings.llm_timeout_seconds,
         max_retries=settings.llm_max_retries,
+        max_tokens=settings.llm_max_tokens,
+        thinking_enabled=settings.llm_thinking_enabled,
     )
+
+
+def get_llm_client(request: Request) -> StructuredLLMClient:
+    """复用应用级 LLM 客户端及其 HTTP 连接池。"""
+    return request.app.state.llm_client
 
 
 def get_resume_service(

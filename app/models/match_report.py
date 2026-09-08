@@ -37,6 +37,7 @@ class MatchReportRow(Base):
     bonus_skills: Mapped[list] = mapped_column(JSON, nullable=False)
     missing_skills: Mapped[list] = mapped_column(JSON, nullable=False)
     priority_skills: Mapped[list] = mapped_column(JSON, nullable=False)
+    requirement_matches: Mapped[list | None] = mapped_column(JSON, nullable=True)
     required_skills_snapshot: Mapped[list] = mapped_column(JSON, nullable=False)
     preferred_skills_snapshot: Mapped[list] = mapped_column(JSON, nullable=False)
     resume_skills_snapshot: Mapped[list] = mapped_column(JSON, nullable=False)

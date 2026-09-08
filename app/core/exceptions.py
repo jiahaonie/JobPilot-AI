@@ -104,6 +104,12 @@ class JobRequirementNotFoundError(DomainError):
     status_code = 404
 
 
+class LegacyJobRequirementError(DomainError):
+    """旧版岗位要求不能继续生成已知不可靠的新报告。"""
+
+    status_code = 409
+
+
 class GroundingValidationError(DomainError):
     """回答引用检索上下文之外的证据时抛出。"""
 

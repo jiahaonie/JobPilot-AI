@@ -49,6 +49,21 @@ class TestSuccessAndParsing:
 
         assert result.value == 42
 
+    def test_v4_extraction_disables_thinking_and_limits_output(self, monkeypatch) -> None:
+        client = make_client(model="deepseek-v4-flash", max_tokens=2048)
+        captured = {}
+
+        def fake_post(payload: dict) -> dict:
+            captured.update(payload)
+            return fake_response('{"value": 42}')
+
+        monkeypatch.setattr(client, "_post_once", fake_post)
+
+        client.complete_structured(prompt="ignored", response_model=ExampleOutput)
+
+        assert captured["thinking"] == {"type": "disabled"}
+        assert captured["max_tokens"] == 2048
+
     def test_raises_structured_error_on_invalid_json(self, monkeypatch) -> None:
         client = make_client()
         monkeypatch.setattr(
@@ -76,6 +91,30 @@ class TestSuccessAndParsing:
                 prompt="ignored",
                 response_model=ExampleOutput,
             )
+
+    def test_repairs_one_schema_mismatch_with_explicit_json_schema(
+        self,
+        monkeypatch,
+    ) -> None:
+        client = make_client()
+        payloads = []
+
+        def fake_post(payload: dict) -> dict:
+            payloads.append(payload)
+            if len(payloads) == 1:
+                return fake_response('{"value": "not-an-int"}')
+            return fake_response('{"value": 42}')
+
+        monkeypatch.setattr(client, "_post_once", fake_post)
+
+        result = client.complete_structured(
+            prompt="ignored",
+            response_model=ExampleOutput,
+        )
+
+        assert result.value == 42
+        assert len(payloads) == 2
+        assert "JSON Schema" in payloads[1]["messages"][-1]["content"]
 
 
 class TestRetries:

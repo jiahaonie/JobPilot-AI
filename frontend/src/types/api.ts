@@ -9,6 +9,9 @@ export type AnalysisStatus = 'pending' | 'analyzing' | 'ready' | 'failed'
 export type StudyTaskPhase = 'learn' | 'practice' | 'verify'
 export type StudyTaskStatus = 'todo' | 'in_progress' | 'done'
 export type StudyPlanStatus = 'not_started' | 'in_progress' | 'completed'
+export type RequirementImportance = 'required' | 'preferred'
+export type MatchMode = 'any' | 'all'
+export type RequirementMatchStatus = 'covered' | 'partial' | 'missing'
 
 export interface Job {
   id: number
@@ -52,6 +55,9 @@ export interface Resume extends ResumeSummary {
 
 export interface JobRequirement {
   job_title: string
+  extraction_version: string
+  skill_requirements: SkillRequirement[]
+  unscored_requirements: UnscoredRequirement[]
   required_skills: string[]
   preferred_skills: string[]
   education: string | null
@@ -60,9 +66,38 @@ export interface JobRequirement {
   evidence: string[]
 }
 
+export interface SkillRequirement {
+  label: string
+  importance: RequirementImportance
+  match_mode: MatchMode
+  options: string[]
+  evidence: string
+}
+
+export interface UnscoredRequirement {
+  category: 'experience' | 'education' | 'soft_skill' | 'other'
+  text: string
+  evidence: string
+}
+
 export interface SkillGap {
   skill: string
   evidence: string | null
+}
+
+export interface SkillOptionMatch {
+  option: string
+  matched_resume_skill: string | null
+  resume_evidence: string | null
+}
+
+export interface RequirementMatch {
+  label: string
+  importance: RequirementImportance
+  match_mode: MatchMode
+  status: RequirementMatchStatus
+  options: SkillOptionMatch[]
+  job_evidence: string
 }
 
 export interface MatchReport {
@@ -77,6 +112,7 @@ export interface MatchReport {
   bonus_skills: string[]
   missing_skills: SkillGap[]
   priority_skills: SkillGap[]
+  requirement_matches: RequirementMatch[] | null
   required_skills_snapshot: string[]
   preferred_skills_snapshot: string[]
   resume_skills_snapshot: string[]

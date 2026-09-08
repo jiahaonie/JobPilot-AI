@@ -29,9 +29,23 @@ def test_prompt_injects_known_job_title() -> None:
     assert "AI Engineer Intern" in prompt
 
 
+def test_job_prompt_requires_empty_collections_to_remain_arrays() -> None:
+    prompt = build_job_requirement_prompt("Python")
+
+    assert '"responsibilities":[]' in prompt
+    assert "List fields must always be JSON arrays" in prompt
+
+
+def test_job_prompt_keeps_preferred_technical_skills_scored() -> None:
+    prompt = build_job_requirement_prompt("加分项：有 RAG 系统搭建经验")
+
+    assert "technical skills importance='preferred'" in prompt
+    assert "Named technical skills remain scored" in prompt
+
+
 def test_structured_output_is_validated() -> None:
     assert parse_structured_output({"value": 3}, ExampleOutput).value == 3
-    with pytest.raises(StructuredOutputError):
+    with pytest.raises(StructuredOutputError, match="value: int_parsing"):
         parse_structured_output({"value": "not-an-int"}, ExampleOutput)
 
 

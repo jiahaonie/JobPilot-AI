@@ -20,6 +20,9 @@ class JobRequirementService:
             raise JobRequirementNotFoundError(f"Job {job_id} has not been analyzed yet")
         return JobRequirement(
             job_title=row.job_title,
+            extraction_version=row.extraction_version,
+            skill_requirements=row.skill_requirements or [],
+            unscored_requirements=row.unscored_requirements or [],
             required_skills=row.required_skills,
             preferred_skills=row.preferred_skills,
             education=row.education,

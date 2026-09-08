@@ -41,6 +41,24 @@ def seed_match_sources(application: FastAPI, client: TestClient) -> tuple[int, i
             JobRequirementRow(
                 job_id=job_id,
                 job_title="RAG Intern",
+                extraction_version="job-requirements-v2",
+                skill_requirements=[
+                    {
+                        "label": "核心技能",
+                        "importance": "required",
+                        "match_mode": "all",
+                        "options": ["Python", "向量数据库"],
+                        "evidence": "Python, Vector Database and FastAPI are useful.",
+                    },
+                    {
+                        "label": "Web 框架",
+                        "importance": "preferred",
+                        "match_mode": "all",
+                        "options": ["FastAPI"],
+                        "evidence": "Python, Vector Database and FastAPI are useful.",
+                    },
+                ],
+                unscored_requirements=[],
                 required_skills=["Python", "向量数据库"],
                 preferred_skills=["FastAPI"],
                 responsibilities=["Build retrieval services"],
@@ -70,7 +88,11 @@ def test_create_read_list_and_keep_match_report_snapshot(
     assert created["matched_skills"] == ["Python", "向量数据库"]
     assert created["required_skills_snapshot"] == ["Python", "向量数据库"]
     assert created["resume_skills_snapshot"] == ["Python", "Vector DB"]
-    assert created["scoring_version"] == "skill-coverage-v1"
+    assert created["scoring_version"] == "skill-coverage-v2"
+    assert created["requirement_matches"][0]["status"] == "covered"
+    assert created["requirement_matches"][0]["options"][0][
+        "matched_resume_skill"
+    ] == "Python"
     assert "录用概率" in created["score_disclaimer"]
 
     report_id = created["id"]
@@ -96,6 +118,29 @@ def test_create_read_list_and_keep_match_report_snapshot(
     assert detail_response.json() == created
     assert list_response.status_code == 200
     assert list_response.json() == [created]
+
+
+def test_v1_requirement_must_be_reanalyzed_before_creating_report(
+    application: FastAPI,
+    client: TestClient,
+) -> None:
+    job_id, resume_id = seed_match_sources(application, client)
+    with application.state.database.session() as session:
+        requirement = session.scalar(
+            select(JobRequirementRow).where(JobRequirementRow.job_id == job_id)
+        )
+        assert requirement is not None
+        requirement.extraction_version = "job-requirements-v1"
+        requirement.skill_requirements = None
+        session.commit()
+
+    response = client.post(
+        f"/api/v1/jobs/{job_id}/match-reports",
+        json={"resume_id": resume_id},
+    )
+
+    assert response.status_code == 409
+    assert "重新分析" in response.json()["detail"]
 
 
 @pytest.mark.parametrize("deleted_source", ["job", "resume"])

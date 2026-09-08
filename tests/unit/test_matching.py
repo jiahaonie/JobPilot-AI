@@ -9,6 +9,7 @@ from app.models.base import Base
 from app.models.job_requirement import JobRequirementRow
 from app.models.resume import Resume
 from app.services.matching import MatchService
+from app.services.skill_normalization import SkillNormalizer
 
 
 @pytest.fixture
@@ -51,6 +52,159 @@ def make_resume(session, skills, resume_id=1):
     session.add(resume)
     session.commit()
     return resume
+
+
+def make_v2_requirement(session, skill_requirements, job_id=1):
+    row = JobRequirementRow(
+        job_id=job_id,
+        job_title="Agent Engineer",
+        extraction_version="job-requirements-v2",
+        skill_requirements=skill_requirements,
+        unscored_requirements=[],
+        required_skills=[
+            option
+            for requirement in skill_requirements
+            if requirement["importance"] == "required"
+            for option in requirement["options"]
+        ],
+        preferred_skills=[],
+        evidence=[requirement["evidence"] for requirement in skill_requirements],
+    )
+    session.add(row)
+    session.commit()
+    return row
+
+
+def test_unlisted_multiword_skill_keeps_original_surface_for_evidence() -> None:
+    normalizer = SkillNormalizer()
+
+    assert normalizer.contains_evidence(
+        "熟悉Prompt Engineering技巧",
+        "Prompt Engineering",
+    )
+    assert normalizer.find_evidence_surface(
+        "熟悉Prompt Engineering技巧",
+        "Prompt Engineering",
+    ) == "Prompt Engineering"
+
+
+def test_evidence_ignores_spacing_between_chinese_and_latin_text() -> None:
+    normalizer = SkillNormalizer()
+
+    assert normalizer.contains_evidence("具备多 Agent 协作经验", "多Agent协作")
+    assert not normalizer.contains_evidence("使用 Django 开发服务", "Go")
+
+
+def test_any_group_is_covered_when_one_option_matches(session) -> None:
+    make_v2_requirement(
+        session,
+        [
+            {
+                "label": "主流编程语言",
+                "importance": "required",
+                "match_mode": "any",
+                "options": ["Python", "TypeScript", "Go"],
+                "evidence": "掌握 Python、TypeScript 或 Go。",
+            },
+            {
+                "label": "提示词工程",
+                "importance": "required",
+                "match_mode": "all",
+                "options": ["Prompt Engineering"],
+                "evidence": "需要 Prompt Engineering。",
+            },
+        ],
+    )
+    make_resume(session, ["Python", "TypeScript", "Prompt Engineering"])
+
+    report = MatchService(session).match(job_id=1, resume_id=1)
+
+    assert report.skill_coverage_score == 100.0
+    assert report.matched_skills == ["Python", "TypeScript", "Prompt Engineering"]
+    assert report.missing_skills == []
+    assert report.requirement_matches is not None
+    assert report.requirement_matches[0].status == "covered"
+    assert report.requirement_matches[1].status == "covered"
+
+
+def test_all_group_reports_partial_coverage_and_missing_options(session) -> None:
+    make_v2_requirement(
+        session,
+        [
+            {
+                "label": "Agent 核心机制",
+                "importance": "required",
+                "match_mode": "all",
+                "options": ["Planning", "Memory", "Tool Use", "Reflection"],
+                "evidence": "需要 Planning、Memory、Tool Use 和 Reflection。",
+            }
+        ],
+    )
+    resume = make_resume(session, ["Tool Calling"])
+    resume.raw_text = "技能：Tool Calling"
+    session.commit()
+
+    report = MatchService(session).match(job_id=1, resume_id=1)
+
+    assert report.skill_coverage_score == 25.0
+    assert report.matched_skills == ["Tool Use"]
+    assert [gap.skill for gap in report.missing_skills] == [
+        "Planning",
+        "Memory",
+        "Reflection",
+    ]
+    assert report.requirement_matches is not None
+    match = report.requirement_matches[0]
+    assert match.status == "partial"
+    assert match.options[2].matched_resume_skill == "Tool Calling"
+    assert match.options[2].resume_evidence == "技能：Tool Calling"
+
+
+def test_exact_resume_text_surface_can_recover_omitted_extracted_skill(session) -> None:
+    make_v2_requirement(
+        session,
+        [
+            {
+                "label": "工作流",
+                "importance": "required",
+                "match_mode": "all",
+                "options": ["Temporal"],
+                "evidence": "熟悉 Temporal。",
+            }
+        ],
+    )
+    resume = make_resume(session, [])
+    resume.raw_text = "项目技术栈：Temporal\n其他经历"
+    session.commit()
+
+    report = MatchService(session).match(job_id=1, resume_id=1)
+
+    assert report.matched_skills == ["Temporal"]
+    assert report.requirement_matches is not None
+    assert report.requirement_matches[0].options[0].resume_evidence == "项目技术栈：Temporal"
+
+
+def test_short_option_does_not_match_inside_resume_word(session) -> None:
+    make_v2_requirement(
+        session,
+        [
+            {
+                "label": "Go",
+                "importance": "required",
+                "match_mode": "all",
+                "options": ["Go"],
+                "evidence": "需要 Go。",
+            }
+        ],
+    )
+    resume = make_resume(session, [])
+    resume.raw_text = "使用 Django 开发服务"
+    session.commit()
+
+    report = MatchService(session).match(job_id=1, resume_id=1)
+
+    assert report.matched_skills == []
+    assert [gap.skill for gap in report.missing_skills] == ["Go"]
 
 
 def test_matched_and_missing_skills(session) -> None:

@@ -28,6 +28,7 @@ def application(tmp_path) -> Iterator[FastAPI]:
         environment="test",
         database_url=f"sqlite:///{tmp_path / 'test.db'}",
         auto_create_tables=True,
+        llm_api_key=None,
     )
     database = Database(settings)
     yield create_app(settings=settings, database=database)

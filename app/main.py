@@ -5,6 +5,7 @@ from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
 
+from app.api.dependencies import build_llm_client
 from app.api.router import api_router
 from app.core.config import Settings, get_settings
 from app.core.database import Database
@@ -19,13 +20,19 @@ def create_app(
     """使用可替换配置和持久化组件创建应用。"""
     effective_settings = settings or get_settings()
     effective_database = database or Database(effective_settings)
+    effective_llm_client = build_llm_client(effective_settings)
 
     @asynccontextmanager
     async def lifespan(_application: FastAPI) -> AsyncIterator[None]:
         if effective_settings.environment == "test" and effective_settings.auto_create_tables:
             effective_database.create_all()
-        yield
-        effective_database.dispose()
+        try:
+            yield
+        finally:
+            close_llm_client = getattr(effective_llm_client, "close", None)
+            if close_llm_client is not None:
+                close_llm_client()
+            effective_database.dispose()
 
     application = FastAPI(
         title=effective_settings.app_name,
@@ -34,6 +41,7 @@ def create_app(
     )
     application.state.settings = effective_settings
     application.state.database = effective_database
+    application.state.llm_client = effective_llm_client
     configure_logging()
     register_exception_handlers(application)
     application.include_router(api_router, prefix=effective_settings.api_prefix)

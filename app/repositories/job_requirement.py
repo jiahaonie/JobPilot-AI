@@ -22,6 +22,9 @@ class JobRequirementRepository:
         existing = self.get_by_job(row.job_id)
         if existing is not None:
             existing.job_title = row.job_title
+            existing.extraction_version = row.extraction_version
+            existing.skill_requirements = row.skill_requirements
+            existing.unscored_requirements = row.unscored_requirements
             existing.required_skills = row.required_skills
             existing.preferred_skills = row.preferred_skills
             existing.education = row.education

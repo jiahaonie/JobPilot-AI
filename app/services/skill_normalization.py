@@ -8,6 +8,9 @@ SKILL_ALIASES: dict[str, frozenset[str]] = {
     "fastapi": frozenset({"FastAPI", "Fast API"}),
     "vector_db": frozenset({"向量数据库", "Vector DB", "Vector Database"}),
     "llm": frozenset({"LLM", "大语言模型", "Large Language Model"}),
+    "tool_use": frozenset(
+        {"Tool Use", "Tool Calling", "Function Calling", "工具调用"}
+    ),
 }
 
 _IGNORED_SEPARATORS = re.compile(r"[\s._\-/]+")
@@ -68,8 +71,24 @@ class SkillNormalizer:
     def contains_evidence(self, text: str, skill: str) -> bool:
         """判断证据是否包含完整技能词项，避免短词误命中。"""
         normalized_text = unicodedata.normalize("NFKC", text).casefold()
-        surfaces = self.alias_map.evidence_surfaces(self.canonical_name(skill))
+        surfaces = {
+            skill,
+            *self.alias_map.evidence_surfaces(self.canonical_name(skill)),
+        }
         return any(_contains_surface(normalized_text, surface) for surface in surfaces)
+
+    def find_evidence_surface(self, text: str, skill: str) -> str | None:
+        """返回证据中实际出现的批准写法，不进行语义猜测。"""
+        normalized_text = unicodedata.normalize("NFKC", text).casefold()
+        surfaces = {
+            skill,
+            *self.alias_map.evidence_surfaces(self.canonical_name(skill)),
+        }
+        for surface in sorted(surfaces, key=lambda value: (-len(value), value)):
+            match = re.search(_surface_pattern(surface), normalized_text)
+            if match is not None:
+                return text[match.start() : match.end()]
+        return None
 
     def equivalent(self, left: str, right: str) -> bool:
         """返回两个名称经明确规范化后是否相同。"""
@@ -78,13 +97,18 @@ class SkillNormalizer:
 
 def _contains_surface(normalized_text: str, surface: str) -> bool:
     """按单词边界匹配拉丁技能，并允许常见分隔符差异。"""
-    normalized_surface = unicodedata.normalize("NFKC", surface).casefold()
-    parts = [part for part in _IGNORED_SEPARATORS.split(normalized_surface) if part]
-    if not parts:
-        return False
-    pattern = r"[\s._\-/]*".join(re.escape(part) for part in parts)
-    if parts[0][0].isascii() and parts[0][0].isalnum():
+    return re.search(_surface_pattern(surface), normalized_text) is not None
+
+
+def _surface_pattern(surface: str) -> str:
+    """构造保留词边界、允许无语义分隔符变化的正则表达式。"""
+    normalized_surface = _normalize_surface(surface)
+    characters = list(normalized_surface)
+    if not characters:
+        return r"(?!)"
+    pattern = r"[\s._\-/]*".join(re.escape(character) for character in characters)
+    if characters[0].isascii() and characters[0].isalnum():
         pattern = rf"(?<![a-z0-9]){pattern}"
-    if parts[-1][-1].isascii() and parts[-1][-1].isalnum():
+    if characters[-1].isascii() and characters[-1].isalnum():
         pattern = rf"{pattern}(?![a-z0-9])"
-    return re.search(pattern, normalized_text) is not None
+    return pattern

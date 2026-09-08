@@ -61,6 +61,14 @@ def test_upgrade_head_builds_current_schema_and_has_no_model_drift(
     } == {("study_plans", "CASCADE")}
     job_columns = {column["name"]: column for column in inspector.get_columns("jobs")}
     assert job_columns["status"]["nullable"] is True
+    requirement_columns = {
+        column["name"] for column in inspector.get_columns("job_requirements")
+    }
+    assert {"extraction_version", "skill_requirements", "unscored_requirements"} <= (
+        requirement_columns
+    )
+    report_columns = {column["name"] for column in inspector.get_columns("match_reports")}
+    assert "requirement_matches" in report_columns
     engine.dispose()
 
     command.check(config)
@@ -119,10 +127,14 @@ def test_migration_backfills_job_analysis_from_requirements(
         job_statuses = list(
             connection.execute(text("SELECT status FROM jobs ORDER BY id")).scalars()
         )
+        extraction_version = connection.execute(
+            text("SELECT extraction_version FROM job_requirements WHERE job_id = 1")
+        ).scalar_one()
     engine.dispose()
 
     assert statuses == {1: "ready", 2: "pending"}
     assert job_statuses == [None, None]
+    assert extraction_version == "job-requirements-v1"
 
 
 def test_migration_refuses_unmapped_active_job_status(tmp_path: Path, monkeypatch) -> None:

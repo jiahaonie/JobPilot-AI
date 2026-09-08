@@ -25,6 +25,13 @@ class JobRequirementRow(Base):
         unique=True,
     )
     job_title: Mapped[str] = mapped_column(String(200), nullable=False)
+    extraction_version: Mapped[str] = mapped_column(
+        String(50),
+        nullable=False,
+        default="job-requirements-v1",
+    )
+    skill_requirements: Mapped[list | None] = mapped_column(JSON, nullable=True)
+    unscored_requirements: Mapped[list | None] = mapped_column(JSON, nullable=True)
     required_skills: Mapped[list] = mapped_column(JSON, nullable=False, default=list)
     preferred_skills: Mapped[list] = mapped_column(JSON, nullable=False, default=list)
     education: Mapped[str | None] = mapped_column(String(200), nullable=True)
