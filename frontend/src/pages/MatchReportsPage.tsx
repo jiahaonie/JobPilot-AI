@@ -108,7 +108,6 @@ export function MatchReportDetailPage({ reportId }: { reportId: number }) {
   return (
     <>
       <div className="page-heading"><div><p className="eyebrow">报告 #{report.id} · {report.scoring_version}</p><h1>技能匹配解释</h1><p>生成于 {formatDate(report.created_at)}</p></div><div className="score-hero"><strong>{scoreText(report.skill_coverage_score)}</strong><span>技能覆盖分</span></div></div>
-      {error && <InlineMessage kind="error">{error}</InlineMessage>}
       <InlineMessage kind="info">{report.score_disclaimer}</InlineMessage>
       {!report.requirement_matches && <InlineMessage kind="info">这是旧版匹配算法生成的历史报告，仅保留原始结果，不提供 V2 要求级解释。</InlineMessage>}
       <section className="score-grid"><article><span>必需技能</span><strong>{scoreText(report.required_score)}</strong></article><article><span>加分技能</span><strong>{scoreText(report.preferred_score)}</strong></article><article><span>岗位 / 简历</span><strong>#{report.job_id} / #{report.resume_id}</strong></article></section>
@@ -119,6 +118,7 @@ export function MatchReportDetailPage({ reportId }: { reportId: number }) {
       </div>
       <section className="panel"><div className="section-heading"><div><p className="eyebrow">全部差距</p><h2>缺失技能与 JD 证据</h2></div></div>{report.missing_skills.length ? <div className="gap-list">{report.missing_skills.map((gap) => <article key={gap.skill}><strong>{gap.skill}</strong><p>{gap.evidence || '没有对应的 JD 原文证据'}</p></article>)}</div> : <p className="muted">没有缺失的必需技能。</p>}</section>
       <section className="panel plan-creator"><div><p className="eyebrow">把技能差距，变成下一步行动</p><h2>结合内置资料生成学习计划</h2><p className="muted">每项任务包含具体行动、完成标准和参考原文；生成成功后自动保存，一份匹配报告对应一份计划。</p></div>{!existingPlan && <label><span>截止日期（可选）</span><input type="date" min={new Date().toISOString().slice(0, 10)} value={deadline} onChange={(event) => setDeadline(event.target.value)} /></label>}<button className="button primary" disabled={busy || planResource.loading || !report.priority_skills.length} onClick={createPlan}>{busy ? '正在生成学习计划…' : existingPlan ? '查看学习计划' : '生成学习计划'}</button></section>
+      {error && <InlineMessage kind="error">{error}</InlineMessage>}
     </>
   )
 }
