@@ -3,26 +3,39 @@
 from collections.abc import Callable, Sequence
 from dataclasses import dataclass
 from datetime import UTC, date, datetime, timedelta
+from time import perf_counter
 
 from pydantic import ValidationError
 from sqlalchemy.exc import IntegrityError, SQLAlchemyError
 from sqlalchemy.orm import Session
 
 from app.core.exceptions import (
+    InsufficientKnowledgeError,
     InvalidStudyTaskTransitionError,
+    KnowledgeUnavailableError,
+    NoPrioritySkillsError,
     ResourceNotFoundError,
     StudyPlanConflictError,
+    StudyPlanGenerationError,
+    StudyPlanGenerationTimeoutError,
     StudyPlanPersistenceError,
     StudyPlanValidationError,
 )
-from app.models.enums import StudyTaskPhase, StudyTaskStatus
+from app.llm.client import StructuredLLMClient
+from app.llm.exceptions import LLMError, LLMTimeoutError
+from app.llm.prompts import build_study_plan_prompt
+from app.models.enums import DocumentStatus, StudyTaskPhase, StudyTaskStatus
+from app.models.knowledge_document import KnowledgeDocument
 from app.models.study_plan import StudyPlan
 from app.models.study_task import StudyTask
 from app.repositories.match_report import MatchReportRepository
 from app.repositories.study_plan import StudyPlanRepository
 from app.schemas.matching import SkillGap
+from app.schemas.study_plan import GeneratedStudyPlan
+from app.services.search import KnowledgeSearchService
 
-GENERATION_METHOD = "rule_v1"
+RULE_GENERATION_METHOD = "rule_v1"
+RAG_GENERATION_METHOD = "rag_v1"
 
 _TASK_TEMPLATES = (
     (
@@ -66,6 +79,14 @@ class StudyTaskBlueprint:
     resource_query: str
     position: int
     due_date: date | None
+
+
+@dataclass(frozen=True)
+class StudyPlanCreationResult:
+    """区分首次持久化与幂等返回已有计划。"""
+
+    plan: StudyPlan
+    created: bool
 
 
 def generate_rule_v1_tasks(
@@ -167,7 +188,7 @@ class StudyPlanService:
         plan = StudyPlan(
             match_report_id=match_report_id,
             deadline=deadline,
-            generation_method=GENERATION_METHOD,
+            generation_method=RULE_GENERATION_METHOD,
         )
         plan.tasks = [
             StudyTask(
@@ -201,6 +222,192 @@ class StudyPlanService:
             raise StudyPlanPersistenceError("Study plan could not be saved") from exc
         return self.get(plan.id)
 
+    def create_rag(
+        self,
+        *,
+        match_report_id: int,
+        deadline: date | None,
+        search_service: KnowledgeSearchService,
+        client: StructuredLLMClient,
+        builtin_document_ids: list[int],
+        model_name: str,
+        prompt_version: str,
+        top_k: int = 5,
+        context_char_limit: int = 30_000,
+        time_budget_seconds: float = 120.0,
+    ) -> StudyPlanCreationResult:
+        """从受控内置资料生成、校验并原子保存一份 rag_v1 计划。"""
+        started_at = perf_counter()
+        report = self.match_report_repository.get(match_report_id)
+        if report is None:
+            raise ResourceNotFoundError(f"Match report {match_report_id} was not found")
+        existing = self.plan_repository.get_by_match_report(match_report_id)
+        if existing is not None:
+            return StudyPlanCreationResult(plan=existing, created=False)
+
+        today = self.date_provider()
+        if deadline is not None and deadline < today:
+            raise StudyPlanValidationError("deadline cannot be earlier than today")
+        skills = self._priority_skills(report.priority_skills)
+        if not skills:
+            raise NoPrioritySkillsError(
+                "Current report has no priority skills and does not need a study plan"
+            )
+
+        documents = self._ready_builtin_documents(builtin_document_ids)
+        candidates: dict[str, list] = {}
+        uncovered_reasons: dict[str, str] = {}
+        try:
+            for skill in skills:
+                if perf_counter() - started_at >= time_budget_seconds:
+                    raise StudyPlanGenerationTimeoutError("Study plan generation timed out")
+                response = search_service.search(
+                    query=skill,
+                    top_k=top_k,
+                    document_ids=builtin_document_ids,
+                )
+                if response.results:
+                    candidates[skill] = response.results
+                else:
+                    uncovered_reasons[skill] = "no_relevant_evidence"
+        except Exception as exc:
+            raise KnowledgeUnavailableError("Built-in knowledge search is unavailable") from exc
+
+        if not candidates:
+            raise InsufficientKnowledgeError(
+                "Built-in knowledge does not support any priority skill",
+                uncovered_skills=self._uncovered_skills(skills, uncovered_reasons),
+            )
+
+        context_chars = sum(
+            len(result.text) for results in candidates.values() for result in results
+        )
+        if context_chars > context_char_limit:
+            raise StudyPlanGenerationError(
+                "Study plan evidence exceeds the configured context limit"
+            )
+
+        candidate_skills = list(candidates)
+        prompt = build_study_plan_prompt(
+            candidate_skills,
+            {
+                skill: [(result.chunk_id, result.text) for result in candidates[skill]]
+                for skill in candidate_skills
+            },
+        )
+        try:
+            generated = client.complete_structured(
+                prompt=prompt,
+                response_model=GeneratedStudyPlan,
+            )
+        except LLMTimeoutError as exc:
+            raise StudyPlanGenerationTimeoutError("Study plan generation timed out") from exc
+        except LLMError as exc:
+            raise StudyPlanGenerationError("Study plan generation failed") from exc
+        if perf_counter() - started_at >= time_budget_seconds:
+            raise StudyPlanGenerationTimeoutError("Study plan generation timed out")
+
+        if [item.skill for item in generated.skills] != candidate_skills:
+            raise StudyPlanGenerationError(
+                "Generated plan omitted, added, duplicated, or reordered target skills"
+            )
+
+        task_rows: list[dict] = []
+        covered: list[str] = []
+        for skill_plan in generated.skills:
+            if skill_plan.support_status == "insufficient_support":
+                uncovered_reasons[skill_plan.skill] = "insufficient_support"
+                continue
+            result_by_id = {result.chunk_id: result for result in candidates[skill_plan.skill]}
+            for task in skill_plan.tasks:
+                if len(set(task.evidence_ids)) != len(task.evidence_ids) or any(
+                    evidence_id not in result_by_id for evidence_id in task.evidence_ids
+                ):
+                    raise StudyPlanGenerationError(
+                        f"Generated task for {skill_plan.skill} cited unknown evidence"
+                    )
+                task_rows.append(
+                    {
+                        "skill": skill_plan.skill,
+                        "phase": task.phase,
+                        "title": task.title.strip(),
+                        "learning_content": task.learning_content.strip(),
+                        "action": task.action.strip(),
+                        "completion_criteria": task.completion_criteria.strip(),
+                        "evidence": [
+                            {
+                                "chunk_id": evidence_id,
+                                "document_id": result_by_id[evidence_id].document_id,
+                                "source_name": result_by_id[evidence_id].source_name,
+                                "excerpt": result_by_id[evidence_id].text,
+                                "location": None,
+                            }
+                            for evidence_id in task.evidence_ids
+                        ],
+                    }
+                )
+            covered.append(skill_plan.skill)
+
+        if not task_rows:
+            raise InsufficientKnowledgeError(
+                "Built-in knowledge does not sufficiently support any priority skill",
+                uncovered_skills=self._uncovered_skills(skills, uncovered_reasons),
+            )
+
+        due_dates = _distribute_due_dates(
+            task_count=len(task_rows),
+            start_date=today,
+            deadline=deadline,
+        )
+        plan = StudyPlan(
+            match_report_id=match_report_id,
+            deadline=deadline,
+            generation_method=RAG_GENERATION_METHOD,
+            coverage={
+                "target_skills": skills,
+                "covered_skills": covered,
+                "uncovered_skills": self._uncovered_skills(skills, uncovered_reasons),
+            },
+            generation_metadata={
+                "model": model_name,
+                "prompt_version": prompt_version,
+                "documents": [
+                    {
+                        "id": document.id,
+                        "source_sha256": document.source_sha256,
+                        "content_sha256": document.content_sha256,
+                    }
+                    for document in documents
+                ],
+            },
+        )
+        plan.tasks = [
+            StudyTask(
+                **row,
+                resource_query=None,
+                position=index,
+                status=StudyTaskStatus.TODO,
+                due_date=due_dates[index - 1],
+            )
+            for index, row in enumerate(task_rows, start=1)
+        ]
+        try:
+            winner = self.plan_repository.get_by_match_report(match_report_id)
+            if winner is not None:
+                return StudyPlanCreationResult(plan=winner, created=False)
+            self.plan_repository.add(plan)
+            self.session.commit()
+        except IntegrityError as exc:
+            self.session.rollback()
+            winner = self.plan_repository.get_by_match_report(match_report_id)
+            if winner is not None:
+                return StudyPlanCreationResult(plan=winner, created=False)
+            raise StudyPlanPersistenceError("Study plan could not be saved") from exc
+        except SQLAlchemyError as exc:
+            self.session.rollback()
+            raise StudyPlanPersistenceError("Study plan could not be saved") from exc
+        return StudyPlanCreationResult(plan=self.get(plan.id), created=True)
+
     def get(self, plan_id: int) -> StudyPlan:
         """返回一份学习计划及其有序任务。"""
         plan = self.plan_repository.get(plan_id)
@@ -211,6 +418,7 @@ class StudyPlanService:
     def list_all(
         self,
         *,
+        match_report_id: int | None = None,
         job_id: int | None = None,
         resume_id: int | None = None,
         offset: int = 0,
@@ -218,6 +426,7 @@ class StudyPlanService:
     ) -> list[StudyPlan]:
         """按可选岗位和简历筛选学习计划。"""
         return self.plan_repository.list(
+            match_report_id=match_report_id,
             job_id=job_id,
             resume_id=resume_id,
             offset=offset,
@@ -264,10 +473,41 @@ class StudyPlanService:
                     if isinstance(item, str)
                     else SkillGap.model_validate(item).skill
                 )
-                if skill:
+                if skill and skill not in skills:
                     skills.append(skill)
         except (AttributeError, TypeError, ValidationError) as exc:
             raise StudyPlanConflictError(
                 "Match report priority skills are not usable"
             ) from exc
         return skills
+
+    def _ready_builtin_documents(self, document_ids: list[int]) -> list[KnowledgeDocument]:
+        """确认配置只引用已审核、已成功索引的内置资料。"""
+        if not document_ids:
+            raise KnowledgeUnavailableError("No built-in knowledge documents are configured")
+        documents: list[KnowledgeDocument] = []
+        for document_id in document_ids:
+            document = self.session.get(KnowledgeDocument, document_id)
+            if (
+                document is None
+                or document.status is not DocumentStatus.READY
+                or not document.is_builtin
+                or not document.approved
+            ):
+                raise KnowledgeUnavailableError(
+                    f"Built-in knowledge document {document_id} is not ready and approved"
+                )
+            documents.append(document)
+        return documents
+
+    @staticmethod
+    def _uncovered_skills(
+        target_skills: list[str],
+        reasons: dict[str, str],
+    ) -> list[dict[str, str]]:
+        """按报告原始技能顺序生成未覆盖快照。"""
+        return [
+            {"skill": skill, "reason_code": reasons[skill]}
+            for skill in target_skills
+            if skill in reasons
+        ]

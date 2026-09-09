@@ -7,7 +7,8 @@ from sqlalchemy.orm import Session
 
 from app.agents.handlers import build_real_tool_specs
 from app.agents.orchestrator import ToolRegistry
-from app.core.config import Settings, get_settings
+from app.agents.tools import CreateStudyPlanInput
+from app.core.config import Settings, get_settings, parse_builtin_document_ids
 from app.core.database import get_db
 from app.llm.client import StructuredLLMClient, UnavailableLLMClient
 from app.llm.deepseek_client import DeepSeekStructuredClient
@@ -15,6 +16,7 @@ from app.rag.chunking import TextChunker
 from app.rag.embedding import FastEmbedder
 from app.rag.parser import PlainTextParser
 from app.rag.vector_store import ChromaVectorIndex
+from app.schemas.study_plan import StudyPlanRead
 from app.services.agent import AgentWorkflowService
 from app.services.analysis import JobAnalysisService
 from app.services.job import JobService
@@ -55,6 +57,11 @@ def build_llm_client(settings: Settings) -> StructuredLLMClient:
 def get_llm_client(request: Request) -> StructuredLLMClient:
     """复用应用级 LLM 客户端及其 HTTP 连接池。"""
     return request.app.state.llm_client
+
+
+def get_runtime_settings(request: Request) -> Settings:
+    """返回创建当前应用实例时使用的配置。"""
+    return request.app.state.settings
 
 
 def get_resume_service(
@@ -183,6 +190,20 @@ def get_knowledge_search_service(
     )
 
 
+def get_builtin_knowledge_search_service(
+    settings: Settings = Depends(get_runtime_settings),
+) -> KnowledgeSearchService:
+    """使用独立 collection 构建只供学习计划使用的内置资料检索。"""
+    return KnowledgeSearchService(
+        embedder=build_embedder(settings.rag_embedding_model),
+        vector_index=build_vector_index(
+            settings.rag_chroma_path,
+            settings.rag_builtin_collection_name,
+        ),
+        default_max_distance=settings.rag_max_distance,
+    )
+
+
 def get_grounded_qa_service(
     search_service: KnowledgeSearchService = Depends(get_knowledge_search_service),
     client: StructuredLLMClient = Depends(get_llm_client),
@@ -198,7 +219,34 @@ def get_agent_workflow_service(
     db: Session = Depends(get_db),
     client: StructuredLLMClient = Depends(get_llm_client),
     search_service: KnowledgeSearchService = Depends(get_knowledge_search_service),
+    builtin_search_service: KnowledgeSearchService = Depends(
+        get_builtin_knowledge_search_service
+    ),
+    settings: Settings = Depends(get_runtime_settings),
 ) -> AgentWorkflowService:
     """将模型选择器绑定到三个真实应用处理器。"""
-    registry = ToolRegistry(build_real_tool_specs(session=db, search_service=search_service))
+    def create_grounded_plan(arguments: CreateStudyPlanInput) -> StudyPlanRead:
+        result = StudyPlanService(db).create_rag(
+            match_report_id=arguments.match_report_id,
+            deadline=arguments.deadline,
+            search_service=builtin_search_service,
+            client=client,
+            builtin_document_ids=parse_builtin_document_ids(
+                settings.rag_builtin_document_ids
+            ),
+            model_name=settings.llm_model,
+            prompt_version=settings.rag_plan_prompt_version,
+            top_k=settings.rag_plan_top_k,
+            context_char_limit=settings.rag_plan_context_chars,
+            time_budget_seconds=settings.rag_plan_time_budget_seconds,
+        )
+        return StudyPlanRead.model_validate(result.plan)
+
+    registry = ToolRegistry(
+        build_real_tool_specs(
+            session=db,
+            search_service=search_service,
+            study_plan_creator=create_grounded_plan,
+        )
+    )
     return AgentWorkflowService(client=client, registry=registry)

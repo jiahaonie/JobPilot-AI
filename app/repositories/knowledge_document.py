@@ -50,6 +50,26 @@ class KnowledgeDocumentRepository:
         )
         return list(self.session.scalars(statement))
 
+    def get_ready_builtin_by_fingerprint(
+        self,
+        *,
+        source_sha256: str,
+        embedding_model: str,
+        chunk_size: int,
+        chunk_overlap: int,
+    ) -> KnowledgeDocument | None:
+        """复用同一原文和索引参数已经成功审核的内置资料。"""
+        statement = select(KnowledgeDocument).where(
+            KnowledgeDocument.status == DocumentStatus.READY,
+            KnowledgeDocument.is_builtin.is_(True),
+            KnowledgeDocument.approved.is_(True),
+            KnowledgeDocument.source_sha256 == source_sha256,
+            KnowledgeDocument.embedding_model == embedding_model,
+            KnowledgeDocument.chunk_size == chunk_size,
+            KnowledgeDocument.chunk_overlap == chunk_overlap,
+        )
+        return self.session.scalar(statement)
+
     def delete(self, document: KnowledgeDocument) -> None:
         """暂存知识文档删除操作。"""
         self.session.delete(document)

@@ -3,7 +3,7 @@
 from datetime import UTC, date, datetime
 from typing import TYPE_CHECKING
 
-from sqlalchemy import Date, DateTime, ForeignKey, Integer, String, Text, UniqueConstraint
+from sqlalchemy import JSON, Date, DateTime, ForeignKey, Integer, String, Text, UniqueConstraint
 from sqlalchemy import Enum as SqlEnum
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
@@ -47,8 +47,11 @@ class StudyTask(Base):
         nullable=False,
     )
     title: Mapped[str] = mapped_column(String(500), nullable=False)
+    learning_content: Mapped[str | None] = mapped_column(Text, nullable=True)
+    action: Mapped[str | None] = mapped_column(Text, nullable=True)
     completion_criteria: Mapped[str] = mapped_column(Text, nullable=False)
-    resource_query: Mapped[str] = mapped_column(String(500), nullable=False)
+    resource_query: Mapped[str | None] = mapped_column(String(500), nullable=True)
+    evidence: Mapped[list[dict] | None] = mapped_column(JSON, nullable=True)
     position: Mapped[int] = mapped_column(Integer, nullable=False)
     status: Mapped[StudyTaskStatus] = mapped_column(
         SqlEnum(

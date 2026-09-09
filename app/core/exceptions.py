@@ -9,9 +9,12 @@ class DomainError(Exception):
 
     status_code = 400
 
-    def __init__(self, detail: str) -> None:
+    code: str | None = None
+
+    def __init__(self, detail: str, **context: object) -> None:
         super().__init__(detail)
         self.detail = detail
+        self.context = context
 
 
 class ResourceNotFoundError(DomainError):
@@ -78,6 +81,41 @@ class StudyPlanPersistenceError(DomainError):
     """学习计划或任务无法完整持久化时抛出。"""
 
     status_code = 500
+    code = "PLAN_PERSISTENCE_FAILED"
+
+
+class NoPrioritySkillsError(StudyPlanConflictError):
+    """匹配报告没有需要生成计划的优先技能。"""
+
+    code = "NO_PRIORITY_SKILLS"
+
+
+class InsufficientKnowledgeError(DomainError):
+    """所有目标技能均没有足够资料支持具体任务。"""
+
+    status_code = 422
+    code = "INSUFFICIENT_KNOWLEDGE"
+
+
+class KnowledgeUnavailableError(DomainError):
+    """内置资料或检索服务当前不可用。"""
+
+    status_code = 503
+    code = "KNOWLEDGE_UNAVAILABLE"
+
+
+class StudyPlanGenerationError(DomainError):
+    """模型供应商或生成结果无法形成有效计划。"""
+
+    status_code = 502
+    code = "PLAN_GENERATION_FAILED"
+
+
+class StudyPlanGenerationTimeoutError(StudyPlanGenerationError):
+    """学习计划生成超过服务时间限制。"""
+
+    status_code = 504
+    code = "PLAN_GENERATION_TIMEOUT"
 
 
 class UnsupportedFileTypeError(DomainError):
@@ -124,7 +162,10 @@ def register_exception_handlers(application: FastAPI) -> None:
         _request: Request,
         exc: DomainError,
     ) -> JSONResponse:
+        content: dict[str, object] = {"detail": exc.detail, **exc.context}
+        if exc.code is not None:
+            content["code"] = exc.code
         return JSONResponse(
             status_code=exc.status_code,
-            content={"detail": exc.detail},
+            content=content,
         )

@@ -81,6 +81,13 @@ class KnowledgeDocumentService(KnowledgeDocumentManagementService):
         source_name: str,
         content_type: str,
         raw_text: str,
+        is_builtin: bool = False,
+        approved: bool = False,
+        source_sha256: str | None = None,
+        content_sha256: str | None = None,
+        embedding_model: str | None = None,
+        chunk_size: int | None = None,
+        chunk_overlap: int | None = None,
     ) -> KnowledgeDocument:
         # 1. SQLite 先保存 indexing 状态
         document = KnowledgeDocument(
@@ -88,6 +95,13 @@ class KnowledgeDocumentService(KnowledgeDocumentManagementService):
             content_type=content_type,
             raw_text=raw_text,
             status=DocumentStatus.INDEXING,
+            is_builtin=is_builtin,
+            approved=approved,
+            source_sha256=source_sha256,
+            content_sha256=content_sha256,
+            embedding_model=embedding_model,
+            chunk_size=chunk_size,
+            chunk_overlap=chunk_overlap,
         )
         self.repository.add(document)
         self.session.commit()

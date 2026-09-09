@@ -40,6 +40,7 @@ class StudyPlanRepository:
     def list(
         self,
         *,
+        match_report_id: int | None = None,
         job_id: int | None = None,
         resume_id: int | None = None,
         offset: int = 0,
@@ -50,6 +51,8 @@ class StudyPlanRepository:
             MatchReportRow,
             StudyPlan.match_report_id == MatchReportRow.id,
         )
+        if match_report_id is not None:
+            statement = statement.where(StudyPlan.match_report_id == match_report_id)
         if job_id is not None:
             statement = statement.where(MatchReportRow.job_id == job_id)
         if resume_id is not None:

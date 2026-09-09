@@ -6,6 +6,21 @@ from typing import Literal
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
+def parse_builtin_document_ids(value: str) -> list[int]:
+    """将逗号分隔配置转换为保序、去重的正整数编号。"""
+    document_ids: list[int] = []
+    for item in value.split(","):
+        normalized = item.strip()
+        if not normalized:
+            continue
+        if not normalized.isdigit() or int(normalized) < 1:
+            return []
+        document_id = int(normalized)
+        if document_id not in document_ids:
+            document_ids.append(document_id)
+    return document_ids
+
+
 class Settings(BaseSettings):
     """应用组合根共享的运行时配置。"""
 
@@ -27,12 +42,18 @@ class Settings(BaseSettings):
 
     rag_chroma_path: str = "./data/chroma"
     rag_collection_name: str = "jobpilot_knowledge"
+    rag_builtin_collection_name: str = "jobpilot_builtin_knowledge"
+    rag_builtin_document_ids: str = ""
     rag_embedding_model: str = "BAAI/bge-small-zh-v1.5"
     rag_chunk_size: int = 500
     rag_chunk_overlap: int = 80
     rag_max_upload_bytes: int = 2 * 1024 * 1024
     rag_max_distance: float = 0.45
     rag_answer_top_k: int = 5
+    rag_plan_top_k: int = 5
+    rag_plan_context_chars: int = 30_000
+    rag_plan_prompt_version: str = "study-plan-rag-v1"
+    rag_plan_time_budget_seconds: float = 120.0
 
     resume_max_upload_bytes: int = 5 * 1024 * 1024
     resume_max_pdf_pages: int = 20

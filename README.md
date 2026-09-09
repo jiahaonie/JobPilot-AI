@@ -42,7 +42,7 @@ JobPilot AI 是一个面向岗位分析与学习知识库 Agent 的分层 FastAP
 - LLM 结构化 JD 解析：将原始岗位描述提取为技能、学历、职责和原文证据（DeepSeek，需配置 API Key）
 - 简历管理：保存文本或上传 TXT/Markdown/电子 PDF，再独立触发 LLM 技能提取
 - 简历与岗位匹配：输出技能覆盖分、已满足 / 缺失技能及原文证据，并可保存历史快照
-- 规则学习计划：基于不可变匹配报告生成有序任务，支持进度计算和受控状态更新
+- 有依据学习计划：按报告技能缺口检索已审核内置资料，由 DeepSeek 生成具体任务并保存引用快照；旧 `rule_v1` 计划保持兼容
 - 本地知识库：TXT/Markdown 入库、Chroma 语义 Top-K 检索和余弦距离过滤
 - Retrieval Evaluation：离线计算 Recall@K 与 MRR
 - 带引用问答：无检索证据时拒答，并校验 `cited_chunk_ids`
@@ -60,9 +60,9 @@ JobPilot AI 是一个面向岗位分析与学习知识库 Agent 的分层 FastAP
     POST /api/v1/jobs/{id}/match-reports # 匹配并保存历史报告
     GET  /api/v1/match-reports/{id}      # 读取历史报告
     GET  /api/v1/match-reports           # 筛选历史报告
-    POST /api/v1/study-plans             # 基于匹配报告创建规则学习计划
+    POST /api/v1/study-plans             # 创建或返回报告对应的 rag_v1 学习计划
     GET  /api/v1/study-plans/{id}        # 查询计划、进度和有序任务
-    GET  /api/v1/study-plans             # 按岗位或简历筛选计划
+    GET  /api/v1/study-plans             # 按报告、岗位或简历筛选计划
     PATCH /api/v1/study-tasks/{id}       # 更新任务状态
     POST /api/v1/knowledge/documents  # 上传知识文档
     POST /api/v1/knowledge/search     # 语义检索
@@ -78,7 +78,7 @@ JobPilot AI 是一个面向岗位分析与学习知识库 Agent 的分层 FastAP
     }
 
 `distance` 是 Chroma cosine distance，越小越相关；超过 `max_distance`
-的结果不会进入回答上下文。Agent 当前只注册以下 4 个真实工具：
+的结果不会进入回答上下文。Agent 当前注册以下 4 个真实工具：
 
 - `get_job_requirements`
 - `compare_resume_with_job`
@@ -95,8 +95,26 @@ JobPilot AI 是一个面向岗位分析与学习知识库 Agent 的分层 FastAP
 
     LLM_API_KEY=sk-xxxxxxxxxxxx
 
+## 导入内置学习资料
+
+先升级数据库，再将作者审核的电子 PDF 导入独立内置 collection：
+
+    uv run --cache-dir .uv-cache --extra dev alembic upgrade head
+    uv run --cache-dir .uv-cache --extra dev python -m scripts.import_builtin_knowledge "PDF 文件路径"
+
+命令会输出文档 ID。将它写入 `.env`；多份资料用逗号分隔：
+
+    RAG_BUILTIN_DOCUMENT_IDS=1
+
+相同 PDF、嵌入模型和分块参数再次导入时会复用已成功结果。只有状态为
+`ready`、标记为内置且已审核的配置文档能够参与学习计划生成。
+
+可用下面的命令做一次不写业务数据的真实检索与生成检查：
+
+    uv run --cache-dir .uv-cache --extra dev python -m scripts.smoke_builtin_study_plan "Agent 工具分类"
+
 ## 当前实现边界
 
-本地真实 Chroma 的写入、查询和删除已有集成测试；测试使用确定性向量，避免下载模型。
-真实 FastEmbed 模型下载和 DeepSeek 网络调用仍需在本机配置网络与 `LLM_API_KEY`
-后做端到端 smoke，离线 Fake 测试不代表第三方服务已联通。
+本地真实 Chroma 的写入、查询和删除已有集成测试。内置资料导入需要电子 PDF；
+扫描件、加密 PDF 和 OCR 留待后续。真实 FastEmbed 与 DeepSeek 可以用上述 smoke 命令检查，
+但一次成功抽样不代表所有岗位技能都有资料覆盖，浏览器主流程仍应按实际部署环境验收。

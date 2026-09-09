@@ -3,7 +3,7 @@
 from datetime import UTC, date, datetime
 from typing import TYPE_CHECKING
 
-from sqlalchemy import Date, DateTime, ForeignKey, String, UniqueConstraint
+from sqlalchemy import JSON, Date, DateTime, ForeignKey, String, UniqueConstraint
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.models.base import Base
@@ -41,6 +41,8 @@ class StudyPlan(Base):
         nullable=False,
         default="rule_v1",
     )
+    coverage: Mapped[dict | None] = mapped_column(JSON, nullable=True)
+    generation_metadata: Mapped[dict | None] = mapped_column(JSON, nullable=True)
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),
         nullable=False,

@@ -27,6 +27,7 @@ class ChromaCollection(Protocol):
         query_embeddings: list[list[float]],
         n_results: int,
         include: list[str],
+        where: dict[str, Any] | None = None,
     ) -> dict[str, Any]:
         """为一批查询向量返回最近记录。"""
 
@@ -57,6 +58,7 @@ class VectorIndex(Protocol):
         query_embedding: list[float],
         *,
         top_k: int = 5,
+        document_ids: list[str] | None = None,
     ) -> list[VectorSearchResult]:
         """返回最近的已存储分块。"""
 
@@ -107,15 +109,25 @@ class ChromaVectorIndex:
         query_embedding: list[float],
         *,
         top_k: int = 5,
+        document_ids: list[str] | None = None,
     ) -> list[VectorSearchResult]:
         """将 Chroma 首批查询结果映射回领域对象。"""
         if not query_embedding or top_k <= 0:
             return []
 
+        query_options: dict[str, Any] = {
+            "query_embeddings": [query_embedding],
+            "n_results": top_k,
+            "include": ["documents", "metadatas", "distances"],
+        }
+        if document_ids:
+            query_options["where"] = (
+                {"document_id": document_ids[0]}
+                if len(document_ids) == 1
+                else {"document_id": {"$in": document_ids}}
+            )
         payload = self.collection.query(
-            query_embeddings=[query_embedding],
-            n_results=top_k,
-            include=["documents", "metadatas", "distances"],
+            **query_options,
         )
         return self._map_first_batch(payload)
 

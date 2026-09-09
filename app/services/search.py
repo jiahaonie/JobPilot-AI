@@ -28,6 +28,7 @@ class KnowledgeSearchService:
         query: str,
         top_k: int = 5,
         max_distance: float | None = None,
+        document_ids: list[int] | None = None,
     ) -> KnowledgeSearchResponse:
         """仅返回余弦距离在配置阈值内的 Chroma 匹配。"""
         normalized_query = query.strip()
@@ -41,7 +42,14 @@ class KnowledgeSearchService:
             raise ValueError("max_distance must be between 0 and 2")
 
         query_embedding = self.embedder.embed_query(normalized_query)
-        matches = self.vector_index.query(query_embedding, top_k=top_k)
+        if document_ids:
+            matches = self.vector_index.query(
+                query_embedding,
+                top_k=top_k,
+                document_ids=[str(document_id) for document_id in document_ids],
+            )
+        else:
+            matches = self.vector_index.query(query_embedding, top_k=top_k)
         results = [
             KnowledgeSearchResult(
                 chunk_id=match.chunk_id,

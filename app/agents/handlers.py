@@ -1,5 +1,7 @@
 """向模型选工具工作流开放的真实应用处理器。"""
 
+from collections.abc import Callable
+
 from sqlalchemy.orm import Session
 
 from app.agents.tools import (
@@ -22,6 +24,7 @@ def build_real_tool_specs(
     *,
     session: Session,
     search_service: KnowledgeSearchService,
+    study_plan_creator: Callable[[CreateStudyPlanInput], StudyPlanRead] | None = None,
 ) -> tuple[ToolSpec, ...]:
     """将四个模型可见工具绑定到真实仓库和服务。"""
     requirement_repository = JobRequirementRepository(session)
@@ -56,11 +59,16 @@ def build_real_tool_specs(
         ).model_dump(mode="json")
 
     def create_study_plan(arguments: CreateStudyPlanInput) -> dict:
-        plan = study_plan_service.create(
-            match_report_id=arguments.match_report_id,
-            deadline=arguments.deadline,
-        )
-        return StudyPlanRead.model_validate(plan).model_dump(mode="json")
+        if study_plan_creator is not None:
+            plan = study_plan_creator(arguments)
+        else:
+            plan = StudyPlanRead.model_validate(
+                study_plan_service.create(
+                    match_report_id=arguments.match_report_id,
+                    deadline=arguments.deadline,
+                )
+            )
+        return plan.model_dump(mode="json")
 
     return (
         ToolSpec(
@@ -83,7 +91,7 @@ def build_real_tool_specs(
         ),
         ToolSpec(
             name="create_study_plan",
-            description="基于不可变匹配报告的优先技能缺口创建规则学习计划。",
+            description="基于不可变匹配报告的优先技能缺口创建有资料依据的学习计划。",
             input_model=CreateStudyPlanInput,
             handler=create_study_plan,
         ),

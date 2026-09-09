@@ -113,6 +113,20 @@ def test_query_maps_first_chroma_batch_to_chunks() -> None:
     assert results[0].distance == 0.15
 
 
+def test_query_filters_allowed_documents_before_top_k() -> None:
+    collection = FakeChromaCollection()
+    index = ChromaVectorIndex(
+        path="unused",
+        collection_name="test",
+        collection=collection,
+    )
+
+    index.query([0.1, 0.2], top_k=5, document_ids=["3", "7"])
+
+    assert collection.query_call is not None
+    assert collection.query_call["where"] == {"document_id": {"$in": ["3", "7"]}}
+
+
 def test_delete_document_uses_metadata_filter() -> None:
     collection = FakeChromaCollection()
     index = ChromaVectorIndex(
