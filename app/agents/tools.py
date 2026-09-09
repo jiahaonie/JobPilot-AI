@@ -45,13 +45,6 @@ class CreateStudyPlanInput(BaseModel):
     deadline: date | None = None
 
 
-class UpdateApplicationStatusInput(BaseModel):
-    """显式更新投递状态的输入。"""
-
-    job_id: int = Field(ge=1)
-    status: str
-
-
 @dataclass(frozen=True)
 class ToolSpec:
     """提供给编排器的已校验工具契约。"""

@@ -19,12 +19,3 @@ class DocumentChunk(BaseModel):
     chunk_index: int
     text: str
     metadata: dict[str, str] = Field(default_factory=dict)
-
-
-class Citation(BaseModel):
-    """随生成回答一起返回的来源信息。"""
-
-    document_id: str
-    source_name: str
-    chunk_index: int
-    excerpt: str
