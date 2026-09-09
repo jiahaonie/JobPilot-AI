@@ -61,6 +61,8 @@ export function MatchReportsPage() {
 export function MatchReportDetailPage({ reportId }: { reportId: number }) {
   const loader = useCallback(() => matchReportsApi.get(reportId), [reportId])
   const resource = useAsyncResource(loader)
+  const planLoader = useCallback(() => studyPlansApi.list({ matchReportId: reportId }), [reportId])
+  const planResource = useAsyncResource(planLoader)
   const [deadline, setDeadline] = useState('')
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -68,16 +70,33 @@ export function MatchReportDetailPage({ reportId }: { reportId: number }) {
   async function createPlan() {
     setBusy(true); setError(null)
     try {
+      const existing = planResource.data?.[0]
+      if (existing) return navigate(`/study-plans/${existing.id}`)
       const plan = await studyPlansApi.create(reportId, deadline || null)
       navigate(`/study-plans/${plan.id}`)
     } catch (reason) {
-      if (reason instanceof ApiError && reason.status === 409) {
+      if (
+        reason instanceof ApiError &&
+        (reason.code === 'PLAN_GENERATION_TIMEOUT' || reason.status === null)
+      ) {
         try {
-          const existing = (await studyPlansApi.list()).find((plan) => plan.match_report_id === reportId)
+          const existing = (await studyPlansApi.list({ matchReportId: reportId }))[0]
           if (existing) return navigate(`/study-plans/${existing.id}`)
-        } catch { /* 保留原始冲突信息。 */ }
+          setError('暂未确认生成结果，请重试查看。')
+          return
+        } catch { /* 保留未知状态。 */ }
       }
-      setError(reason instanceof Error ? reason.message : String(reason))
+      if (reason instanceof ApiError) {
+        const messages: Record<string, string> = {
+          NO_PRIORITY_SKILLS: '当前报告没有需要优先补齐的技能，无须生成计划。',
+          INSUFFICIENT_KNOWLEDGE: '当前内置资料不足以支持这些技能，暂未生成计划。',
+          KNOWLEDGE_UNAVAILABLE: '内置资料暂时不可用，请稍后重试。',
+          PLAN_GENERATION_FAILED: '生成失败，计划尚未保存。请重试。',
+          PLAN_PERSISTENCE_FAILED: '保存失败，计划尚未保存。请重试。',
+        }
+        setError(reason.code ? messages[reason.code] ?? reason.message : reason.message)
+      } else setError(reason instanceof Error ? reason.message : String(reason))
+    } finally {
       setBusy(false)
     }
   }
@@ -85,6 +104,7 @@ export function MatchReportDetailPage({ reportId }: { reportId: number }) {
   if (resource.loading) return <LoadingState />
   if (resource.error) return <ErrorState error={resource.error} onRetry={resource.reload} />
   const report = resource.data!
+  const existingPlan = planResource.data?.[0]
   return (
     <>
       <div className="page-heading"><div><p className="eyebrow">报告 #{report.id} · {report.scoring_version}</p><h1>技能匹配解释</h1><p>生成于 {formatDate(report.created_at)}</p></div><div className="score-hero"><strong>{scoreText(report.skill_coverage_score)}</strong><span>技能覆盖分</span></div></div>
@@ -98,7 +118,7 @@ export function MatchReportDetailPage({ reportId }: { reportId: number }) {
         <section className="panel"><p className="eyebrow">需要补齐</p><h2>优先学习技能</h2>{report.priority_skills.length ? <div className="gap-list">{report.priority_skills.map((gap) => <article key={gap.skill}><strong>{gap.skill}</strong><p>{gap.evidence || '没有对应的 JD 原文证据'}</p></article>)}</div> : <p className="muted">没有优先技能缺口。</p>}</section>
       </div>
       <section className="panel"><div className="section-heading"><div><p className="eyebrow">全部差距</p><h2>缺失技能与 JD 证据</h2></div></div>{report.missing_skills.length ? <div className="gap-list">{report.missing_skills.map((gap) => <article key={gap.skill}><strong>{gap.skill}</strong><p>{gap.evidence || '没有对应的 JD 原文证据'}</p></article>)}</div> : <p className="muted">没有缺失的必需技能。</p>}</section>
-      <section className="panel plan-creator"><div><p className="eyebrow">转为行动</p><h2>基于此快照创建学习计划</h2><p className="muted">同一报告只能创建一份计划；发生冲突时会打开已有计划。</p></div><label><span>截止日期（可选）</span><input type="date" min={new Date().toISOString().slice(0, 10)} value={deadline} onChange={(event) => setDeadline(event.target.value)} /></label><button className="button primary" disabled={busy || !report.priority_skills.length} onClick={createPlan}>{busy ? '正在创建…' : '创建学习计划'}</button></section>
+      <section className="panel plan-creator"><div><p className="eyebrow">把技能差距，变成下一步行动</p><h2>结合内置资料生成学习计划</h2><p className="muted">每项任务包含具体行动、完成标准和参考原文；生成成功后自动保存，一份匹配报告对应一份计划。</p></div>{!existingPlan && <label><span>截止日期（可选）</span><input type="date" min={new Date().toISOString().slice(0, 10)} value={deadline} onChange={(event) => setDeadline(event.target.value)} /></label>}<button className="button primary" disabled={busy || planResource.loading || !report.priority_skills.length} onClick={createPlan}>{busy ? '正在生成学习计划…' : existingPlan ? '查看学习计划' : '生成学习计划'}</button></section>
     </>
   )
 }

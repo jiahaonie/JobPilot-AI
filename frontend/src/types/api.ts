@@ -128,8 +128,11 @@ export interface StudyTask {
   skill: string
   phase: StudyTaskPhase
   title: string
+  learning_content: string | null
+  action: string | null
   completion_criteria: string
-  resource_query: string
+  resource_query: string | null
+  evidence: StudyTaskEvidence[] | null
   position: number
   status: StudyTaskStatus
   due_date: string | null
@@ -138,11 +141,32 @@ export interface StudyTask {
   updated_at: string
 }
 
+export interface StudyTaskEvidence {
+  chunk_id: string
+  document_id: number
+  source_name: string
+  excerpt: string
+  location: string | null
+}
+
+export interface UncoveredSkill {
+  skill: string
+  reason_code: 'no_relevant_evidence' | 'insufficient_support' | string
+}
+
+export interface StudyPlanCoverage {
+  target_skills: string[]
+  covered_skills: string[]
+  uncovered_skills: UncoveredSkill[]
+}
+
 export interface StudyPlan {
   id: number
   match_report_id: number
   deadline: string | null
   generation_method: string
+  coverage: StudyPlanCoverage | null
+  generation_metadata: Record<string, unknown> | null
   status: StudyPlanStatus
   completed_count: number
   task_count: number

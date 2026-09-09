@@ -4,14 +4,20 @@ const API_BASE_URL = (import.meta.env.VITE_API_BASE_URL ?? '/api/v1').replace(/\
 
 export class ApiError extends Error {
   readonly status: number | null
+  readonly code: string | null
+  readonly context: Record<string, unknown>
 
   constructor(
     message: string,
     status: number | null,
+    code: string | null = null,
+    context: Record<string, unknown> = {},
   ) {
     super(message)
     this.name = 'ApiError'
     this.status = status
+    this.code = code
+    this.context = context
   }
 }
 
@@ -73,7 +79,15 @@ export async function apiRequest<T>(
         payload && typeof payload === 'object'
           ? formatDetail((payload as Record<string, unknown>).detail)
           : null
-      throw new ApiError(detail ?? `请求失败（${response.status}）`, response.status)
+      const record = payload && typeof payload === 'object'
+        ? payload as Record<string, unknown>
+        : {}
+      throw new ApiError(
+        detail ?? `请求失败（${response.status}）`,
+        response.status,
+        typeof record.code === 'string' ? record.code : null,
+        record,
+      )
     }
     return payload as T
   } catch (error) {
