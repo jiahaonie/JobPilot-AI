@@ -78,7 +78,7 @@ export function JobDetailPage({ jobId }: { jobId: number }) {
     <>
       <div className="page-heading">
         <div><p className="eyebrow">{job.company_name} · 岗位 #{job.id}</p><h1>{job.job_title}</h1><p>{job.city || '城市未填写'}{job.internship_duration ? ` · ${job.internship_duration}` : ''}</p></div>
-        <StatusBadge status={job.status} />
+        <div className="heading-actions"><AppLink to={`/jobs/${job.id}/edit`} className="button secondary">编辑岗位</AppLink><StatusBadge status={job.status} /></div>
       </div>
       {message && <InlineMessage kind={message.kind}>{message.text}</InlineMessage>}
 

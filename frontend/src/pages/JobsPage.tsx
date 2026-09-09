@@ -4,6 +4,7 @@ import { AppLink, navigate } from '../app/router'
 import { EmptyState, ErrorState, InlineMessage, LoadingState } from '../components/feedback/PageState'
 import { StatusBadge } from '../components/ui/StatusBadge'
 import { useAsyncResource } from '../hooks/useAsyncResource'
+import type { Job, JobCreate } from '../types/api'
 import { formatDate } from '../utils/format'
 
 export function JobsPage() {
@@ -40,7 +41,7 @@ export function JobsPage() {
                 <div><dt>绑定简历</dt><dd>{job.resume_id ? `#${job.resume_id}` : '未绑定'}</dd></div>
                 <div><dt>创建时间</dt><dd>{formatDate(job.created_at, true)}</dd></div>
               </dl>
-              <div className="card-actions"><AppLink to={`/jobs/${job.id}`} className="button secondary">打开流程</AppLink><button className="button danger-ghost" onClick={() => removeJob(job.id, job.job_title)}>删除</button></div>
+              <div className="card-actions"><AppLink to={`/jobs/${job.id}`} className="button secondary">打开流程</AppLink><AppLink to={`/jobs/${job.id}/edit`} className="button secondary">编辑</AppLink><button className="button danger-ghost" onClick={() => removeJob(job.id, job.job_title)}>删除</button></div>
             </article>
           ))}
         </div>
@@ -50,25 +51,46 @@ export function JobsPage() {
 }
 
 export function NewJobPage() {
+  return <JobForm />
+}
+
+export function EditJobPage({ jobId }: { jobId: number }) {
+  const loader = useCallback(() => jobsApi.get(jobId), [jobId])
+  const resource = useAsyncResource(loader)
+
+  if (resource.loading) return <LoadingState label="正在读取岗位信息…" />
+  if (resource.error) return <ErrorState error={resource.error} onRetry={resource.reload} />
+  return <JobForm job={resource.data!} />
+}
+
+function JobForm({ job }: { job?: Job }) {
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState<string | null>(null)
-  const [rawText, setRawText] = useState('')
+  const [rawText, setRawText] = useState(job?.raw_text ?? '')
 
   async function submit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault()
+    const form = new FormData(event.currentTarget)
+    const payload: JobCreate = {
+      company_name: String(form.get('company_name') ?? '').trim(),
+      job_title: String(form.get('job_title') ?? '').trim(),
+      city: String(form.get('city') ?? '').trim() || null,
+      internship_duration: String(form.get('internship_duration') ?? '').trim() || null,
+      raw_text: rawText.trim(),
+      source_url: String(form.get('source_url') ?? '').trim() || null,
+    }
+    const analysisChanged = Boolean(
+      job && (payload.job_title !== job.job_title || payload.raw_text !== job.raw_text),
+    )
+    if (analysisChanged && !window.confirm('修改岗位名称或 JD 会使当前分析失效，保存后需要重新分析。历史匹配报告仍会保留。确定继续吗？')) return
+
     setSubmitting(true)
     setError(null)
-    const form = new FormData(event.currentTarget)
     try {
-      const job = await jobsApi.create({
-        company_name: String(form.get('company_name') ?? '').trim(),
-        job_title: String(form.get('job_title') ?? '').trim(),
-        city: String(form.get('city') ?? '').trim() || null,
-        internship_duration: String(form.get('internship_duration') ?? '').trim() || null,
-        raw_text: rawText.trim(),
-        source_url: String(form.get('source_url') ?? '').trim() || null,
-      })
-      navigate(`/jobs/${job.id}`)
+      const savedJob = job
+        ? await jobsApi.update(job.id, payload)
+        : await jobsApi.create(payload)
+      navigate(`/jobs/${savedJob.id}`)
     } catch (reason) {
       setError(reason instanceof Error ? reason.message : String(reason))
     } finally {
@@ -78,18 +100,19 @@ export function NewJobPage() {
 
   return (
     <>
-      <div className="page-heading"><div><p className="eyebrow">新机会</p><h1>创建岗位</h1><p>这里只保存信息，不会自动调用 LLM。</p></div></div>
+      <div className="page-heading"><div><p className="eyebrow">{job ? `岗位 #${job.id}` : '新机会'}</p><h1>{job ? '编辑岗位' : '创建岗位'}</h1><p>{job ? '保存信息不会自动调用 LLM。' : '这里只保存信息，不会自动调用 LLM。'}</p></div></div>
       <form className="panel form-panel" onSubmit={submit}>
         {error && <InlineMessage kind="error">{error}</InlineMessage>}
+        {job && <InlineMessage kind="info">修改岗位名称或 JD 后，当前岗位分析会重置为“待分析”；历史匹配报告仍保留原始快照。</InlineMessage>}
         <div className="form-grid">
-          <label><span>公司名称 *</span><input name="company_name" required maxLength={200} /></label>
-          <label><span>岗位名称 *</span><input name="job_title" required maxLength={200} /></label>
-          <label><span>城市</span><input name="city" maxLength={100} /></label>
-          <label><span>实习时长</span><input name="internship_duration" maxLength={100} placeholder="例如：3 个月" /></label>
-          <label className="full-width"><span>来源链接</span><input name="source_url" type="url" maxLength={1000} /></label>
+          <label><span>公司名称 *</span><input name="company_name" required maxLength={200} defaultValue={job?.company_name} /></label>
+          <label><span>岗位名称 *</span><input name="job_title" required maxLength={200} defaultValue={job?.job_title} /></label>
+          <label><span>城市</span><input name="city" maxLength={100} defaultValue={job?.city ?? ''} /></label>
+          <label><span>实习时长</span><input name="internship_duration" maxLength={100} placeholder="例如：3 个月" defaultValue={job?.internship_duration ?? ''} /></label>
+          <label className="full-width"><span>来源链接</span><input name="source_url" type="url" maxLength={1000} defaultValue={job?.source_url ?? ''} /></label>
           <label className="full-width"><span>岗位描述 JD * <small>{rawText.length.toLocaleString()}/100,000</small></span><textarea required maxLength={100000} rows={14} value={rawText} onChange={(event) => setRawText(event.target.value)} /></label>
         </div>
-        <div className="form-actions"><AppLink to="/jobs" className="button secondary">取消</AppLink><button className="button primary" disabled={submitting}>{submitting ? '正在保存…' : '保存并继续'}</button></div>
+        <div className="form-actions"><AppLink to={job ? `/jobs/${job.id}` : '/jobs'} className="button secondary">取消</AppLink><button className="button primary" disabled={submitting}>{submitting ? '正在保存…' : job ? '保存修改' : '保存并继续'}</button></div>
       </form>
     </>
   )

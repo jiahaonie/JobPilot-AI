@@ -39,6 +39,8 @@ export interface JobCreate {
   source_url?: string | null
 }
 
+export type JobUpdate = Partial<JobCreate>
+
 export interface ResumeSummary {
   id: number
   title: string

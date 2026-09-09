@@ -2,7 +2,7 @@ import { routeId, usePathname } from './app/router'
 import { AppShell } from './components/layout/AppShell'
 import { DashboardPage } from './pages/DashboardPage'
 import { JobDetailPage } from './pages/JobDetailPage'
-import { JobsPage, NewJobPage } from './pages/JobsPage'
+import { EditJobPage, JobsPage, NewJobPage } from './pages/JobsPage'
 import { MatchReportDetailPage, MatchReportsPage } from './pages/MatchReportsPage'
 import { NotFoundPage } from './pages/NotFoundPage'
 import { ResumeDetailPage } from './pages/ResumeDetailPage'
@@ -10,12 +10,14 @@ import { ResumesPage } from './pages/ResumesPage'
 import { StudyPlanDetailPage, StudyPlansPage } from './pages/StudyPlansPage'
 
 function CurrentPage({ pathname }: { pathname: string }) {
+  const editJobMatch = pathname.match(/^\/jobs\/(\d+)\/edit$/)
   if (pathname === '/') {
     return <DashboardPage />
   }
   if (pathname === '/dashboard') return <DashboardPage />
   if (pathname === '/jobs') return <JobsPage />
   if (pathname === '/jobs/new') return <NewJobPage />
+  if (editJobMatch) return <EditJobPage jobId={Number(editJobMatch[1])} />
   if (/^\/jobs\/\d+$/.test(pathname)) return <JobDetailPage jobId={routeId(pathname)!} />
   if (pathname === '/resumes') return <ResumesPage />
   if (/^\/resumes\/\d+$/.test(pathname)) return <ResumeDetailPage resumeId={routeId(pathname)!} />

@@ -1,11 +1,13 @@
 import { apiRequest, longOperation } from './client'
-import type { Job, JobCreate, JobRequirement, JobStatus, MatchReport } from '../types/api'
+import type { Job, JobCreate, JobRequirement, JobStatus, JobUpdate, MatchReport } from '../types/api'
 
 export const jobsApi = {
   list: () => apiRequest<Job[]>('/jobs'),
   get: (jobId: number) => apiRequest<Job>(`/jobs/${jobId}`),
   create: (payload: JobCreate) =>
     apiRequest<Job>('/jobs', { method: 'POST', body: payload }),
+  update: (jobId: number, payload: JobUpdate) =>
+    apiRequest<Job>(`/jobs/${jobId}`, { method: 'PATCH', body: payload }),
   remove: (jobId: number) => apiRequest<void>(`/jobs/${jobId}`, { method: 'DELETE' }),
   bindResume: (jobId: number, resumeId: number) =>
     apiRequest<Job>(`/jobs/${jobId}/resume`, {
