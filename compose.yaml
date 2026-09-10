@@ -1,0 +1,53 @@
+name: jobpilot
+
+services:
+  migrate:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: jobpilot-backend:local
+    env_file:
+      - .env
+    environment:
+      ENVIRONMENT: production
+      DATABASE_URL: sqlite:////app/data/jobpilot.db
+      RAG_CHROMA_PATH: /app/data/chroma
+    volumes:
+      - jobpilot_data:/app/data
+    command: ["alembic", "upgrade", "head"]
+    restart: "no"
+
+  backend:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: jobpilot-backend:local
+    env_file:
+      - .env
+    environment:
+      ENVIRONMENT: production
+      DATABASE_URL: sqlite:////app/data/jobpilot.db
+      RAG_CHROMA_PATH: /app/data/chroma
+    volumes:
+      - jobpilot_data:/app/data
+    ports:
+      - "8000:8000"
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+    restart: unless-stopped
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    image: jobpilot-frontend:local
+    ports:
+      - "8080:80"
+    depends_on:
+      backend:
+        condition: service_healthy
+    restart: unless-stopped
+
+volumes:
+  jobpilot_data:
