@@ -30,9 +30,7 @@ class FakeAnalysisLLM:
                         "importance": "required",
                         "match_mode": "all",
                         "options": ["Python", "FastAPI", "Vector DB"],
-                        "evidence": (
-                            "Proficient in Python and FastAPI. Knowledge of Vector DB."
-                        ),
+                        "evidence": ("Proficient in Python and FastAPI. Knowledge of Vector DB."),
                     },
                     {
                         "label": "NLP",
@@ -71,8 +69,7 @@ def _create_job(client: TestClient) -> int:
             "company_name": "Example Co",
             "job_title": "RAG Intern",
             "raw_text": (
-                "Proficient in Python and FastAPI. Knowledge of Vector DB. "
-                "NLP is preferred."
+                "Proficient in Python and FastAPI. Knowledge of Vector DB. NLP is preferred."
             ),
         },
     )

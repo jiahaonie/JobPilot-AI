@@ -219,21 +219,18 @@ def get_agent_workflow_service(
     db: Session = Depends(get_db),
     client: StructuredLLMClient = Depends(get_llm_client),
     search_service: KnowledgeSearchService = Depends(get_knowledge_search_service),
-    builtin_search_service: KnowledgeSearchService = Depends(
-        get_builtin_knowledge_search_service
-    ),
+    builtin_search_service: KnowledgeSearchService = Depends(get_builtin_knowledge_search_service),
     settings: Settings = Depends(get_runtime_settings),
 ) -> AgentWorkflowService:
     """将模型选择器绑定到三个真实应用处理器。"""
+
     def create_grounded_plan(arguments: CreateStudyPlanInput) -> StudyPlanRead:
         result = StudyPlanService(db).create_rag(
             match_report_id=arguments.match_report_id,
             deadline=arguments.deadline,
             search_service=builtin_search_service,
             client=client,
-            builtin_document_ids=parse_builtin_document_ids(
-                settings.rag_builtin_document_ids
-            ),
+            builtin_document_ids=parse_builtin_document_ids(settings.rag_builtin_document_ids),
             model_name=settings.llm_model,
             prompt_version=settings.rag_plan_prompt_version,
             top_k=settings.rag_plan_top_k,

@@ -90,9 +90,7 @@ def test_create_read_list_and_keep_match_report_snapshot(
     assert created["resume_skills_snapshot"] == ["Python", "Vector DB"]
     assert created["scoring_version"] == "skill-coverage-v2"
     assert created["requirement_matches"][0]["status"] == "covered"
-    assert created["requirement_matches"][0]["options"][0][
-        "matched_resume_skill"
-    ] == "Python"
+    assert created["requirement_matches"][0]["options"][0]["matched_resume_skill"] == "Python"
     assert "录用概率" in created["score_disclaimer"]
 
     report_id = created["id"]

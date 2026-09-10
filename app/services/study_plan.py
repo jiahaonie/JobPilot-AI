@@ -175,15 +175,11 @@ class StudyPlanService:
         if report is None:
             raise ResourceNotFoundError(f"Match report {match_report_id} was not found")
         if self.plan_repository.get_by_match_report(match_report_id) is not None:
-            raise StudyPlanConflictError(
-                f"Match report {match_report_id} already has a study plan"
-            )
+            raise StudyPlanConflictError(f"Match report {match_report_id} already has a study plan")
 
         skills = self._priority_skills(report.priority_skills)
         if not skills:
-            raise StudyPlanConflictError(
-                f"Match report {match_report_id} has no priority skills"
-            )
+            raise StudyPlanConflictError(f"Match report {match_report_id} has no priority skills")
 
         plan = StudyPlan(
             match_report_id=match_report_id,
@@ -469,16 +465,12 @@ class StudyPlanService:
         try:
             for item in payload:
                 skill = (
-                    item.strip()
-                    if isinstance(item, str)
-                    else SkillGap.model_validate(item).skill
+                    item.strip() if isinstance(item, str) else SkillGap.model_validate(item).skill
                 )
                 if skill and skill not in skills:
                     skills.append(skill)
         except (AttributeError, TypeError, ValidationError) as exc:
-            raise StudyPlanConflictError(
-                "Match report priority skills are not usable"
-            ) from exc
+            raise StudyPlanConflictError("Match report priority skills are not usable") from exc
         return skills
 
     def _ready_builtin_documents(self, document_ids: list[int]) -> list[KnowledgeDocument]:

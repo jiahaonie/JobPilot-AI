@@ -22,9 +22,7 @@ class StudyPlanRepository:
     def get(self, plan_id: int) -> StudyPlan | None:
         """按主键读取计划及其有序任务。"""
         statement = (
-            select(StudyPlan)
-            .options(selectinload(StudyPlan.tasks))
-            .where(StudyPlan.id == plan_id)
+            select(StudyPlan).options(selectinload(StudyPlan.tasks)).where(StudyPlan.id == plan_id)
         )
         return self.session.scalar(statement)
 

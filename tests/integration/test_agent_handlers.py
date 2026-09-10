@@ -74,9 +74,7 @@ def test_four_agent_handlers_call_real_persistence_and_services(tmp_path) -> Non
                     matched_skills=["FastAPI"],
                     bonus_skills=[],
                     missing_skills=[{"skill": "RAG", "evidence": "需要 FastAPI 和 RAG。"}],
-                    priority_skills=[
-                        {"skill": "RAG", "evidence": "需要 FastAPI 和 RAG。"}
-                    ],
+                    priority_skills=[{"skill": "RAG", "evidence": "需要 FastAPI 和 RAG。"}],
                     required_skills_snapshot=["FastAPI", "RAG"],
                     preferred_skills_snapshot=[],
                     resume_skills_snapshot=["FastAPI"],

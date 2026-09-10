@@ -150,14 +150,11 @@ def _prepare_v2_result(result: JobRequirement, raw_text: str) -> JobRequirement:
     for requirement in result.skill_requirements:
         if not _excerpt_in_text(requirement.evidence, raw_text):
             raise ValueError(
-                "skill requirement evidence is not present in JD: "
-                f"{requirement.label}"
+                f"skill requirement evidence is not present in JD: {requirement.label}"
             )
         seen: set[str] = set()
         for option in requirement.options:
-            if len(option) > 80 or any(
-                marker in option for marker in _FORBIDDEN_OPTION_MARKERS
-            ):
+            if len(option) > 80 or any(marker in option for marker in _FORBIDDEN_OPTION_MARKERS):
                 raise ValueError(f"skill option is not atomic: {option}")
             if not normalizer.contains_evidence(requirement.evidence, option):
                 raise ValueError(f"skill option is not supported by evidence: {option}")

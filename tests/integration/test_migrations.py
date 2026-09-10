@@ -61,9 +61,7 @@ def test_upgrade_head_builds_current_schema_and_has_no_model_drift(
     } == {("study_plans", "CASCADE")}
     job_columns = {column["name"]: column for column in inspector.get_columns("jobs")}
     assert job_columns["status"]["nullable"] is True
-    requirement_columns = {
-        column["name"] for column in inspector.get_columns("job_requirements")
-    }
+    requirement_columns = {column["name"] for column in inspector.get_columns("job_requirements")}
     assert {"extraction_version", "skill_requirements", "unscored_requirements"} <= (
         requirement_columns
     )

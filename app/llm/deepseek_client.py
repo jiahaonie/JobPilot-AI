@@ -73,9 +73,7 @@ class DeepSeekStructuredClient:
             "response_format": {"type": "json_object"},
         }
         if self.model.startswith("deepseek-v4"):
-            payload["thinking"] = {
-                "type": "enabled" if self.thinking_enabled else "disabled"
-            }
+            payload["thinking"] = {"type": "enabled" if self.thinking_enabled else "disabled"}
 
         started_at = perf_counter()
         response = self._request(payload)

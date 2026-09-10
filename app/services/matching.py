@@ -94,13 +94,13 @@ class MatchService:
                 status = (
                     "covered"
                     if matched_count == len(option_matches)
-                    else "partial" if matched_count else "missing"
+                    else "partial"
+                    if matched_count
+                    else "missing"
                 )
 
             target_coverages = (
-                required_coverages
-                if requirement.importance == "required"
-                else preferred_coverages
+                required_coverages if requirement.importance == "required" else preferred_coverages
             )
             target_coverages.append(coverage)
             target_matches = (

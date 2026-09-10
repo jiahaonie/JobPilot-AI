@@ -26,9 +26,9 @@ def build_job_requirement_prompt(
         "Return concise JSON with exactly these keys: job_title, skill_requirements, "
         "unscored_requirements, education, internship_duration, responsibilities. "
         "The application derives version, compatibility fields, and aggregate evidence. "
-        "Use this JSON shape: {\"job_title\":\"\",\"skill_requirements\":[],"
-        "\"unscored_requirements\":[],\"education\":null,"
-        "\"internship_duration\":null,\"responsibilities\":[]}. "
+        'Use this JSON shape: {"job_title":"","skill_requirements":[],'
+        '"unscored_requirements":[],"education":null,'
+        '"internship_duration":null,"responsibilities":[]}. '
         "List fields must always be JSON arrays, including when empty. "
         "Each skill_requirements item must contain label, importance ('required' or "
         "'preferred'), match_mode ('any' or 'all'), options, and evidence. Each option "
@@ -94,8 +94,7 @@ def build_study_plan_prompt(
         {
             "skill": skill,
             "chunks": [
-                {"chunk_id": chunk_id, "text": text}
-                for chunk_id, text in evidence_by_skill[skill]
+                {"chunk_id": chunk_id, "text": text} for chunk_id, text in evidence_by_skill[skill]
             ],
         }
         for skill in skills

@@ -82,10 +82,13 @@ def test_unlisted_multiword_skill_keeps_original_surface_for_evidence() -> None:
         "熟悉Prompt Engineering技巧",
         "Prompt Engineering",
     )
-    assert normalizer.find_evidence_surface(
-        "熟悉Prompt Engineering技巧",
-        "Prompt Engineering",
-    ) == "Prompt Engineering"
+    assert (
+        normalizer.find_evidence_surface(
+            "熟悉Prompt Engineering技巧",
+            "Prompt Engineering",
+        )
+        == "Prompt Engineering"
+    )
 
 
 def test_evidence_ignores_spacing_between_chinese_and_latin_text() -> None:

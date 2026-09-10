@@ -47,9 +47,7 @@ class FakePlanClient:
     """从提示词目标技能生成一项可校验任务。"""
 
     def complete_structured(self, *, prompt, response_model):
-        skill_payload = prompt.split("<target_skills>\n", 1)[1].split(
-            "\n</target_skills>", 1
-        )[0]
+        skill_payload = prompt.split("<target_skills>\n", 1)[1].split("\n</target_skills>", 1)[0]
         document_id = prompt.split("document:", 1)[1].split(":", 1)[0]
         skills = json.loads(skill_payload)
         return response_model.model_validate(
@@ -94,8 +92,8 @@ def _configure_rag(application: FastAPI) -> int:
         document_id = document.id
     application.state.settings.rag_builtin_document_ids = str(document_id)
     application.state.llm_client = FakePlanClient()
-    application.dependency_overrides[get_builtin_knowledge_search_service] = (
-        lambda: FakeSearch(document_id)
+    application.dependency_overrides[get_builtin_knowledge_search_service] = lambda: FakeSearch(
+        document_id
     )
     return document_id
 
@@ -271,16 +269,22 @@ def test_update_task_status_and_recalculate_plan_progress(application, client) -
     )
     assert invalid.status_code == 409
     assert client.patch("/api/v1/study-tasks/999999", json={"status": "done"}).status_code == 404
-    assert client.patch(
-        f"/api/v1/study-tasks/{task_ids[1]}",
-        json={"status": "invalid"},
-    ).status_code == 422
+    assert (
+        client.patch(
+            f"/api/v1/study-tasks/{task_ids[1]}",
+            json={"status": "invalid"},
+        ).status_code
+        == 422
+    )
 
     for task_id in task_ids[1:]:
-        assert client.patch(
-            f"/api/v1/study-tasks/{task_id}",
-            json={"status": "done"},
-        ).status_code == 200
+        assert (
+            client.patch(
+                f"/api/v1/study-tasks/{task_id}",
+                json={"status": "done"},
+            ).status_code
+            == 200
+        )
 
     completed = client.get(f"/api/v1/study-plans/{plan['id']}").json()
     assert completed["status"] == "completed"

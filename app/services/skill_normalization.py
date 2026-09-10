@@ -8,9 +8,7 @@ SKILL_ALIASES: dict[str, frozenset[str]] = {
     "fastapi": frozenset({"FastAPI", "Fast API"}),
     "vector_db": frozenset({"向量数据库", "Vector DB", "Vector Database"}),
     "llm": frozenset({"LLM", "大语言模型", "Large Language Model"}),
-    "tool_use": frozenset(
-        {"Tool Use", "Tool Calling", "Function Calling", "工具调用"}
-    ),
+    "tool_use": frozenset({"Tool Use", "Tool Calling", "Function Calling", "工具调用"}),
 }
 
 _IGNORED_SEPARATORS = re.compile(r"[\s._\-/]+")

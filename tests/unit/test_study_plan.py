@@ -326,9 +326,7 @@ def test_rag_v1_saves_grounded_tasks_partial_coverage_and_reuses_existing(tmp_pa
             assert result.plan.coverage == {
                 "target_skills": ["Agent", "Docker"],
                 "covered_skills": ["Agent"],
-                "uncovered_skills": [
-                    {"skill": "Docker", "reason_code": "no_relevant_evidence"}
-                ],
+                "uncovered_skills": [{"skill": "Docker", "reason_code": "no_relevant_evidence"}],
             }
             assert result.plan.tasks[0].learning_content.startswith("理解")
             assert result.plan.tasks[0].action.startswith("画出")
