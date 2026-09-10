@@ -1,0 +1,40 @@
+# 版本控制与编辑器状态
+.git/
+.idea/
+.vscode/
+
+# 本机 Python 环境、缓存与构建产物
+.venv/
+.uv-cache/
+.cache/
+__pycache__/
+*.py[cod]
+*.egg-info/
+build/
+dist/
+.pytest_cache/
+.pytest-work/
+.ruff_cache/
+.mypy_cache/
+.coverage
+htmlcov/
+
+# 密钥和本地环境配置不得进入镜像
+.env
+.env.*
+!.env.example
+
+# 本地业务数据不得写入镜像层
+*.db
+*.db-*
+*.sqlite
+*.sqlite3
+data/chroma/
+
+# 前端本地产物
+frontend/node_modules/
+frontend/dist/
+
+# 操作系统临时文件
+.DS_Store
+Thumbs.db
